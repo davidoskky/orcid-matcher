@@ -458,30 +458,27 @@
       const DEFAULT_QUERY = `PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
 SELECT DISTINCT ?person ?personLabel ?doi WHERE {
-  SERVICE <https://query-scholarly.wikidata.org/sparql> {
-    SELECT DISTINCT ?personId ?doi WHERE {
-      ?work wdt:P356 ?doi ;
-            wdt:P50 ?person ;
-            wdt:P577 ?date .
-      FILTER(?date > "2020-12-31T23:59:59Z"^^xsd:dateTime)
-      BIND(STRAFTER(STR(?person), "entity/") AS ?personId)
-      BIND(SHA256(?personId) AS ?h)
-      FILTER( STRSTARTS(?h, SUBSTR(STR(RAND()), 3, 1)) )
-    }
-    LIMIT 500
-  }
-  BIND(IRI(CONCAT("http://www.wikidata.org/entity/", ?personId)) AS ?person)
+  ?work wdt:P356 ?doi ;
+        wdt:P50  ?person ;
+        wdt:P577 ?date .
+
+  FILTER(?date > "2020-12-31T23:59:59Z"^^xsd:dateTime)
+  ?person wdt:P31 wd:Q5 .
   FILTER NOT EXISTS { ?person wdt:P496 [] }
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+
+  OPTIONAL { ?person rdfs:label ?personLabel . FILTER(LANG(?personLabel) = "en") }
 }
+ORDER BY RAND()
 LIMIT 200`;
       textarea.textContent = DEFAULT_QUERY;
 
       runBtn.addEventListener("click", async () => {
         if (!textarea.value.trim()) return;
         runBtn.disabled = true;
-        statusEl.textContent = "Querying Wikidata...";
+        statusEl.textContent = "Querying via Qlever...";
         authorListEl.innerHTML = "";
         try {
           const data = await fetchQuery(textarea.value);
@@ -520,14 +517,14 @@ LIMIT 200`;
       });
 
       async function fetchQuery(sparql) {
-        const url = "https://query.wikidata.org/sparql";
+        const url = "https://qlever.dev/api/wikidata";
         const resp = await fetch(url, {
           method: "POST",
           headers: {
             Accept: "application/sparql-results+json",
-            "Content-Type": "application/x-www-form-urlencoded",
+            "Content-Type": "application/sparql-query",
           },
-          body: "query=" + encodeURIComponent(sparql),
+          body: sparql,
         });
         if (!resp.ok) throw new Error(`SPARQL error (${resp.status})`);
         const json = await resp.json();
