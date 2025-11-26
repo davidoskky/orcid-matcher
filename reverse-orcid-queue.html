@@ -7,137 +7,182 @@
     <title>Reverse ORCID queue</title>
     <style>
       :root {
-        font-family: "Segoe UI", "Roboto", sans-serif;
+        font-family: "Segoe UI", "Roboto", system-ui, sans-serif;
         color: #0f172a;
+        background-color: #e5e7ff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
       }
       body {
-        margin: 0;
-        padding: 2rem;
-        background: #eef2ff;
+        background: linear-gradient(180deg, #edf0ff, #e2e8ff 60%);
       }
-      h1 {
-        margin-top: 0;
-      }
-      .panel {
-        max-width: 1500px;
-        width: min(1360px, 100%);
-        margin: 0 auto;
-        background: #ffffff;
-        border-radius: 16px;
-        padding: 2rem;
-        box-shadow: 0 12px 48px rgba(15, 23, 42, 0.12);
-      }
-      .controls {
+      .app {
+        min-height: 100vh;
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
+        gap: 1rem;
+        padding: 2rem;
+      }
+      .hero {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 1.75rem;
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15);
+        max-width: 1200px;
+        width: min(1200px, 100%);
+        margin: 0 auto;
+      }
+      .hero h1 {
+        margin: 0;
+        font-size: 2rem;
+      }
+      .hero p {
+        margin: 0.5rem 0 0;
+        color: #475569;
+        line-height: 1.45;
+        max-width: 820px;
+      }
+      .controls {
+        margin-top: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
       }
       .controls textarea {
         width: 100%;
-        min-height: 160px;
-        border-radius: 12px;
-        padding: 0.9rem;
+        min-height: 180px;
+        border-radius: 14px;
         border: 1px solid #cbd5f5;
+        padding: 0.95rem;
         font-family: "JetBrains Mono", "Fira Code", monospace;
         background: #f8fafc;
-        box-shadow: inset 0 1px 4px rgba(15, 23, 42, 0.08);
+        resize: vertical;
       }
       .controls-row {
         display: flex;
-        gap: 0.6rem;
         flex-wrap: wrap;
+        gap: 0.6rem;
         align-items: center;
       }
       .controls button {
-        padding: 0.55rem 1.4rem;
+        padding: 0.65rem 1.4rem;
         background: #2563eb;
         border: none;
-        color: white;
-        border-radius: 8px;
-        cursor: pointer;
+        border-radius: 10px;
+        color: #fff;
         font-weight: 600;
-        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+        cursor: pointer;
+        box-shadow: 0 8px 16px rgba(37, 99, 235, 0.35);
       }
       .controls button:disabled {
-        opacity: 0.6;
-        cursor: progress;
+        opacity: 0.5;
+        cursor: not-allowed;
         box-shadow: none;
       }
-      .controls-row input {
-        flex: 1;
-        min-width: 220px;
-        padding: 0.55rem 0.9rem;
-        border-radius: 8px;
-        border: 1px solid #cbd5f5;
-        font-size: 0.95rem;
-        background: #fff;
-      }
       .status {
-        margin-top: 0.5rem;
-        font-size: 0.9rem;
+        margin: 0;
+        font-size: 0.95rem;
         color: #475569;
       }
-      .grid {
+      .master-detail {
+        flex: 1;
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 1.5rem;
-        margin-top: 1.5rem;
+        grid-template-columns: 300px minmax(0, 1fr);
+        gap: 1rem;
+        min-height: 0;
       }
-      .card {
-        background: #f8fafc;
-        border-radius: 10px;
-        padding: 1rem;
-        border: 1px solid #e0e7ff;
-      }
-      .card h2 {
-        margin: 0 0 0.4rem;
-      }
-      .list {
-        margin: 1rem 0 0;
-        max-height: 420px;
-        overflow: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 0.6rem;
-      }
-      .row {
+      .panel {
         background: #ffffff;
-        border-radius: 8px;
-        padding: 1rem;
-        border: 1px solid #dbeafe;
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+        border-radius: 20px;
+        padding: 1.25rem;
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
+        gap: 1rem;
+        min-height: 0;
+        box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
       }
-      .row-content {
+      .panel-header {
         display: flex;
         justify-content: space-between;
         gap: 1rem;
         align-items: flex-start;
       }
-      .row-body {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
+      .panel-header h2 {
+        margin: 0;
+        font-size: 1.3rem;
       }
-      .row-body a {
-        color: #1d4ed8;
-        font-weight: 700;
-        text-decoration: none;
-        font-size: 1rem;
-      }
-      .row small {
+      .panel-header p {
+        margin: 0;
         color: #475569;
         font-size: 0.9rem;
       }
-      .doi-meta {
+      .inline-field {
+        padding: 0.6rem 0.9rem;
+        border-radius: 10px;
+        border: 1px solid #cbd5f5;
+        font-size: 0.95rem;
+        background: #fff;
+      }
+      .panel input {
+        width: 100%;
+      }
+      .authors-panel {
+        overflow-y: auto;
+      }
+      .candidates-panel {
+        background: #f8fafc;
+        overflow-y: auto;
+      }
+      .authors-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        min-height: 0;
+      }
+      .author-row {
+        border-radius: 12px;
+        border: 1px solid transparent;
+        padding: 0.85rem;
+        background: #f8fafc;
+        text-align: left;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        transition: background 0.2s ease, border-color 0.2s ease;
+        font-family: inherit;
+      }
+      .author-row:hover,
+      .author-row:focus-visible {
+        border-color: #c7d2fe;
+        background: #ffffff;
+        outline: none;
+      }
+      .author-row.selected {
+        border-color: #2563eb;
+        background: #eef2ff;
+      }
+      .author-row .author-name {
+        font-weight: 600;
+        font-size: 1rem;
+        margin: 0;
+      }
+      .author-row .author-meta {
         font-size: 0.85rem;
         color: #475569;
-        margin-top: 0.4rem;
+      }
+      .doi-meta {
         display: flex;
         flex-wrap: wrap;
         gap: 0.35rem;
+        font-size: 0.8rem;
+        color: #475569;
       }
       .doi-meta code {
         background: #eef2ff;
@@ -145,84 +190,84 @@
         border-radius: 3px;
         border: 1px solid #c7d2fe;
       }
-      .suggestions {
+      .candidate-header {
         display: flex;
         flex-direction: column;
-        gap: 0.45rem;
-        background: #f1f5ff;
-        border-radius: 10px;
-        padding: 0.6rem 0.8rem;
-        max-height: 220px;
-        overflow: auto;
+        gap: 0.35rem;
       }
-      .suggestions::-webkit-scrollbar {
-        height: 6px;
+      .candidate-title {
+        margin: 0;
+        font-size: 1.4rem;
       }
-      .suggestions::-webkit-scrollbar-thumb {
-        background: rgba(37, 99, 235, 0.4);
-        border-radius: 999px;
+      .candidate-subtitle {
+        margin: 0;
+        font-size: 0.95rem;
+        color: #475569;
       }
-      .suggestion-item {
-        padding: 0.7rem;
-        border-radius: 8px;
-        border: 1px solid #e0e7ff;
+      .candidate-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+      }
+      .candidate-card {
+        padding: 1rem;
+        border-radius: 14px;
         background: #ffffff;
+        border: 1px solid #e0e7ff;
         display: flex;
         justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 0.75rem;
       }
-      .suggestion-item strong {
-        display: block;
-        font-size: 0.95rem;
-      }
-      .suggestion-meta {
-        font-size: 0.8rem;
-        color: #475569;
-      }
-      .suggestion-actions button {
-        padding: 0.35rem 0.75rem;
-        border-radius: 6px;
-        border: 1px solid #a5b4fc;
-        background: #eff6ff;
-        color: #1d4ed8;
-        cursor: pointer;
-      }
-      .row-actions {
+      .candidate-info {
         display: flex;
         flex-direction: column;
-        gap: 0.4rem;
-        align-items: flex-end;
+        gap: 0.25rem;
       }
-      .row-actions button {
-        padding: 0.55rem 1rem;
-        background: #0f172a;
-        border-radius: 6px;
-        border: none;
-        color: #fff;
-        font-size: 0.9rem;
-        cursor: pointer;
+      .candidate-name {
+        font-weight: 600;
+        margin: 0;
+        font-size: 1rem;
       }
-      .row-status {
-        font-size: 0.8rem;
+      .candidate-meta {
+        margin: 0;
+        font-size: 0.85rem;
         color: #475569;
       }
-      .queue {
-        margin-top: 1rem;
+      .candidate-actions button {
+        padding: 0.55rem 0.95rem;
         border-radius: 10px;
+        border: none;
+        background: #2563eb;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+      }
+      .candidate-actions button:active {
+        transform: scale(0.97);
+      }
+      .queue {
+        border-radius: 14px;
+        background: #ffffff;
         border: 1px solid #c7d2fe;
         padding: 1rem;
-        background: #f8fafc;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
       }
       .queue h3 {
-        margin-top: 0;
+        margin: 0;
+        font-size: 1rem;
       }
       .queue-list {
         display: flex;
         flex-direction: column;
-        gap: 0.35rem;
+        gap: 0.4rem;
+        min-height: 0;
         max-height: 220px;
-        overflow: auto;
+        overflow-y: auto;
       }
       .queue-item {
         display: flex;
@@ -230,18 +275,29 @@
         align-items: center;
         background: #ffffff;
         border: 1px solid #dbeafe;
+        border-radius: 8px;
         padding: 0.4rem 0.75rem;
-        border-radius: 6px;
         font-size: 0.9rem;
       }
+      .queue-item button {
+        padding: 0.35rem 0.75rem;
+        border-radius: 6px;
+        border: 1px solid #2563eb;
+        background: transparent;
+        color: #2563eb;
+        cursor: pointer;
+        font-size: 0.85rem;
+      }
       .queue-actions {
-        margin-top: 0.8rem;
         display: flex;
         gap: 0.6rem;
+        flex-wrap: wrap;
       }
       .queue-actions button {
-        padding: 0.5rem 1.2rem;
-        border-radius: 8px;
+        flex: 1;
+        min-width: 140px;
+        padding: 0.55rem 1rem;
+        border-radius: 10px;
         border: none;
         cursor: pointer;
         font-weight: 600;
@@ -255,71 +311,115 @@
         border: 1px solid #475569;
         color: #475569;
       }
+      .empty-state {
+        padding: 1rem;
+        border-radius: 12px;
+        background: rgba(37, 99, 235, 0.07);
+        border: 1px dashed rgba(37, 99, 235, 0.35);
+        color: #1e293b;
+        font-size: 0.95rem;
+      }
       .small-link {
+        margin: 0.35rem 0 0;
         color: #475569;
-        text-decoration: none;
         font-size: 0.8rem;
       }
-      @media (max-width: 600px) {
-        .row {
+      @media (max-width: 1024px) {
+        .master-detail {
           grid-template-columns: 1fr;
         }
       }
     </style>
   </head>
   <body>
-    <div class="panel">
-      <h1>Queue ORCID additions</h1>
-      <p>
-        Run a SPARQL query (via Qlever) to find authors with DOIs published after 2020 who
-        still lack an ORCID (P496). Enter ORCIDs for the people you are confident about and
-        queue them for a batch QuickStatements export.
-      </p>
-      <div class="controls">
-        <textarea id="query" spellcheck="false"></textarea>
-        <div class="controls-row">
-          <button id="run-query">Run query</button>
-          <button id="find-all" type="button">Find ORCID for all visible</button>
-          <input id="row-filter" type="search" placeholder="Filter researchers (name, ORCID, DOI)" />
+    <div class="app">
+      <header class="hero">
+        <div>
+          <h1>Queue ORCID additions</h1>
+          <p>
+            Run a SPARQL query (via Qlever) to find authors with DOIs published after 2020 who still
+            lack an ORCID (P496). Enter ORCIDs for the people you are confident about and queue them
+            for a batch QuickStatements export.
+          </p>
+          <p class="small-link">
+            Powered by Wikidata SPARQL + Crossref — generated in your browser.
+          </p>
         </div>
-        <p class="status" id="status">Ready.</p>
-      </div>
-      <div class="grid">
-        <div class="card">
-          <h2>Results</h2>
-          <div class="list" id="result-list"></div>
+        <div class="controls">
+          <textarea id="query" spellcheck="false"></textarea>
+          <div class="controls-row">
+            <button id="run-query">Run query</button>
+            <button id="find-all" type="button" disabled>Find ORCID for all visible</button>
+          </div>
+          <p class="status" id="status">Ready.</p>
         </div>
-        <div class="card">
-          <h2>Queue</h2>
+      </header>
+      <div class="master-detail">
+        <aside class="panel authors-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Authors</h2>
+              <p>Filter by name, QID, or DOI on this panel.</p>
+            </div>
+          </div>
+          <input
+            id="author-filter"
+            class="inline-field"
+            type="search"
+            placeholder="Filter researchers (name, ORCID, DOI)"
+            aria-label="Filter authors"
+          />
+          <div id="author-list" class="authors-list" role="list"></div>
+        </aside>
+        <section class="panel candidates-panel">
+          <div class="panel-header">
+            <div class="candidate-header">
+              <h2 id="candidate-title" class="candidate-title">Select an author</h2>
+              <p id="candidate-subtitle" class="candidate-subtitle">No author chosen yet.</p>
+            </div>
+            <input
+              id="candidate-filter"
+              class="inline-field"
+              type="search"
+              placeholder="Filter candidates by ORCID"
+              aria-label="Filter ORCID candidates"
+              disabled
+            />
+          </div>
+          <div id="candidate-list" class="candidate-list"></div>
           <div class="queue" id="queue">
-            <h3>No entries yet</h3>
+            <h3>Queue</h3>
             <div class="queue-list" id="queue-list"></div>
             <div class="queue-actions">
               <button class="open-qs" id="open-qs" disabled>Open QuickStatements</button>
               <button class="clear-queue" id="clear-queue" disabled>Clear queue</button>
             </div>
           </div>
-        </div>
+        </section>
       </div>
-      <p class="small-link">
-        Powered by Wikidata SPARQL + Crossref &mdash; generated on the client in your browser.
-      </p>
     </div>
     <script>
-      const resultList = document.getElementById("result-list");
-      const queueList = document.getElementById("queue-list");
       const statusEl = document.getElementById("status");
       const openBtn = document.getElementById("open-qs");
       const clearBtn = document.getElementById("clear-queue");
-      const textarea = document.getElementById("query");
+      const queueList = document.getElementById("queue-list");
       const runBtn = document.getElementById("run-query");
+      const findAllBtn = document.getElementById("find-all");
+      const textarea = document.getElementById("query");
+      const authorFilterInput = document.getElementById("author-filter");
+      const authorListEl = document.getElementById("author-list");
+      const candidateFilterInput = document.getElementById("candidate-filter");
+      const candidateListEl = document.getElementById("candidate-list");
+      const candidateTitleEl = document.getElementById("candidate-title");
+      const candidateSubtitleEl = document.getElementById("candidate-subtitle");
 
       const QUEUE = [];
-      const filterInput = document.getElementById("row-filter");
+      const candidateCache = new Map();
       let latestResults = [];
+      let selectedAuthor = null;
+      let currentCandidates = [];
       let filterValue = "";
-      const findAllBtn = document.getElementById("find-all");
-      const rowMap = new Map();
+
       const DEFAULT_QUERY = `PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wdt: <http://www.wikidata.org/prop/direct/>
@@ -347,20 +447,25 @@ LIMIT 200`;
         if (!textarea.value.trim()) return;
         runBtn.disabled = true;
         statusEl.textContent = "Querying Wikidata...";
-        resultList.innerHTML = "";
+        authorListEl.innerHTML = "";
         try {
           const data = await fetchQuery(textarea.value);
           renderResults(data);
         } catch (error) {
+          authorListEl.innerHTML = "<div class=\"empty-state\">Unable to fetch authors.</div>";
           statusEl.textContent = `Error: ${error.message}`;
         } finally {
           runBtn.disabled = false;
         }
       });
 
-      filterInput.addEventListener("input", () => {
-        filterValue = filterInput.value.trim().toLowerCase();
+      authorFilterInput.addEventListener("input", () => {
+        filterValue = authorFilterInput.value.trim().toLowerCase();
         renderResults(latestResults);
+      });
+
+      candidateFilterInput.addEventListener("input", () => {
+        renderCandidateList();
       });
 
       findAllBtn.addEventListener("click", async () => {
@@ -369,10 +474,8 @@ LIMIT 200`;
         findAllBtn.disabled = true;
         statusEl.textContent = "Loading ORCID candidates for visible researchers...";
         for (const item of filtered) {
-          const meta = rowMap.get(item.qid);
-          if (!meta) continue;
           try {
-            await loadCandidates(item, meta.suggestionsEl, meta.button, meta.statusSpan);
+            await loadCandidates(item);
           } catch (error) {
             console.warn("batch load error", item.qid, error);
           }
@@ -413,113 +516,135 @@ LIMIT 200`;
         }));
       }
 
-      const CROSSREF_BASE = "https://api.crossref.org/works/";
-      const CROSSREF_HEADERS = { Accept: "application/json" };
-      const SCHOLARLY_ENDPOINT = "https://query-scholarly.wikidata.org/sparql";
-      const candidateCache = new Map();
-
       function renderResults(results) {
         latestResults = Array.isArray(results) ? results : [];
+        filterValue = authorFilterInput.value.trim().toLowerCase();
         const filtered = applyRowFilter(latestResults);
-        rowMap.clear();
+        if (selectedAuthor && !latestResults.some((item) => item.qid === selectedAuthor.qid)) {
+          selectedAuthor = null;
+          currentCandidates = [];
+        }
+        authorListEl.innerHTML = "";
         if (!latestResults.length) {
-          resultList.innerHTML = "<p>No results.</p>";
-          statusEl.textContent = "No researchers found.";
+          authorListEl.innerHTML = "<div class=\"empty-state\">Run the query to populate this list.</div>";
           findAllBtn.disabled = true;
+          statusEl.textContent = "No researchers found.";
+          renderCandidateList();
           return;
         }
         if (!filtered.length) {
-          resultList.innerHTML = "<p>No researchers match the filter.</p>";
+          authorListEl.innerHTML = "<div class=\"empty-state\">No researchers match that filter.</div>";
           findAllBtn.disabled = true;
         } else {
-          resultList.innerHTML = "";
           filtered.forEach((item) => {
-            const row = document.createElement("div");
-            row.className = "row";
-            row.dataset.qid = item.qid;
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "author-row";
+            if (selectedAuthor && selectedAuthor.qid === item.qid) {
+              button.classList.add("selected");
+            }
             const doiHtml = item.dois.length
-              ? item.dois.map((doi) => `<code>${doi}</code>`).join(" ")
-              : "<em>No DOI captured</em>";
-            row.innerHTML = `
-              <div class="row-content">
-                <div class="row-body">
-                  <a href="https://www.wikidata.org/wiki/${item.qid}" target="_blank">${item.label}</a>
-                  <small>${item.qid}</small>
-                  <div class="doi-meta">${doiHtml}</div>
-                </div>
-                <div class="row-actions">
-                  <button type="button" class="load-candidates">Find ORCID candidates</button>
-                  <span class="row-status"></span>
-                </div>
-              </div>
-              <div class="suggestions" data-qid="${item.qid}"></div>
+              ? `<div class=\"doi-meta\">${item.dois
+                  .map((doi) => `<code>${doi}</code>`)
+                  .join(" ")}</div>`
+              : `<div class=\"doi-meta\"><em>No DOI captured</em></div>`;
+            button.innerHTML = `
+              <span class=\"author-name\">${item.label}</span>
+              <span class=\"author-meta\">${item.qid}</span>
+              ${doiHtml}
             `;
-            const button = row.querySelector(".load-candidates");
-            const statusSpan = row.querySelector(".row-status");
-            const suggestionsEl = row.querySelector(".suggestions");
-            button.addEventListener("click", () =>
-              loadCandidates(item, suggestionsEl, button, statusSpan)
-            );
-            const doiMeta = row.querySelector(".doi-meta");
-            rowMap.set(item.qid, { button, statusSpan, suggestionsEl, doiMeta });
-            resultList.appendChild(row);
+            button.addEventListener("click", () => handleAuthorSelect(item));
+            button.addEventListener("keydown", (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                handleAuthorSelect(item);
+              }
+            });
+            authorListEl.appendChild(button);
           });
           findAllBtn.disabled = false;
         }
         if (filterValue) {
           statusEl.textContent = `Showing ${filtered.length}/${latestResults.length} researchers matching filter.`;
-          findAllBtn.disabled = filtered.length === 0;
         } else {
           statusEl.textContent = `Found ${latestResults.length} potential researchers.`;
         }
+        renderCandidateList();
       }
 
-      function applyRowFilter(items) {
-        if (!items.length) return [];
-        if (!filterValue) return items;
-        return items.filter((item) => {
-          const haystack = [
-            item.label,
-            item.qid,
-            ...(item.dois || []),
-          ]
-            .filter(Boolean)
-            .map((value) => value.toString().toLowerCase())
-            .join(" ");
-          return haystack.includes(filterValue);
+      function renderCandidateList() {
+        if (!selectedAuthor) {
+          candidateTitleEl.textContent = "Select an author";
+          candidateSubtitleEl.textContent = "No author chosen yet.";
+          candidateFilterInput.disabled = true;
+          candidateListEl.innerHTML = "<div class=\"empty-state\">Click an author to load ORCID candidates.</div>";
+          return;
+        }
+        candidateTitleEl.textContent = selectedAuthor.label;
+        candidateSubtitleEl.textContent = selectedAuthor.qid;
+        candidateFilterInput.disabled = false;
+        const filterTerm = candidateFilterInput.value.trim().toLowerCase();
+        const matches = currentCandidates.filter((candidate) =>
+          candidate.orcid.toLowerCase().includes(filterTerm)
+        );
+        if (!matches.length) {
+          candidateListEl.innerHTML = currentCandidates.length
+            ? "<div class=\"empty-state\">No candidates match that ORCID filter.</div>"
+            : "<div class=\"empty-state\">No ORCID candidates loaded yet for this author.</div>";
+          return;
+        }
+        candidateListEl.innerHTML = "";
+        matches.forEach((candidate) => {
+          const card = document.createElement("article");
+          card.className = "candidate-card";
+          card.innerHTML = `
+            <div class=\"candidate-info\">
+              <p class=\"candidate-name\">${candidate.name || candidate.orcid}</p>
+              <p class=\"candidate-meta\">${candidate.orcid}</p>
+            </div>
+            <div class=\"candidate-actions\">
+              <button type=\"button\">Add ORCID</button>
+            </div>
+          `;
+          card
+            .querySelector("button")
+            .addEventListener("click", () => {
+              upsertQueue({ qid: selectedAuthor.qid, label: selectedAuthor.label, orcid: candidate.orcid });
+              statusEl.textContent = `Queued ${selectedAuthor.label} → ${candidate.orcid}`;
+            });
+          candidateListEl.appendChild(card);
         });
       }
 
-      async function loadCandidates(item, suggestionsEl, button, statusEl) {
+      function handleAuthorSelect(author) {
+        selectedAuthor = author;
+        currentCandidates = candidateCache.get(author.qid) || [];
+        renderResults(latestResults);
+        loadCandidates(author).catch((error) => {
+          console.warn("Candidate load failed", error);
+        });
+      }
+
+      async function loadCandidates(item) {
         const key = item.qid;
         if (candidateCache.has(key)) {
-          const cached = candidateCache.get(key);
-          renderCandidateSuggestions(cached, suggestionsEl, item);
-          statusEl.textContent = `${cached.length} cached candidate(s)`;
+          currentCandidates = candidateCache.get(key);
+          renderCandidateList();
+          statusEl.textContent = `${currentCandidates.length} cached candidate(s) for ${item.label}.`;
           return;
         }
-        button.disabled = true;
-        const originalText = button.textContent;
-        button.textContent = "Loading…";
-        statusEl.textContent = "";
+        statusEl.textContent = `Gathering ORCID candidates for ${item.label}...`;
         const missingDois = [];
-        const map = new Map();
         if (!item.dois?.length) {
           try {
             item.dois = await fetchPersonDois(item.qid);
-            const meta = rowMap.get(item.qid);
-            if (meta?.doiMeta) {
-              const doiHtml = item.dois.length
-                ? item.dois.map((doi) => `<code>${doi}</code>`).join(" ")
-                : "<em>No DOI captured</em>";
-              meta.doiMeta.innerHTML = doiHtml;
-            }
           } catch (error) {
-            statusEl.textContent = `DOI lookup failed: ${error.message}`;
+            console.warn("DOI lookup failed", error);
           }
         }
+        const map = new Map();
         try {
-          for (const doi of item.dois) {
+          for (const doi of item.dois || []) {
             if (!doi) continue;
             try {
               const data = await fetchCrossref(doi);
@@ -550,7 +675,8 @@ LIMIT 200`;
             dois: Array.from(entry.dois),
           }));
           candidateCache.set(key, candidates);
-          renderCandidateSuggestions(candidates, suggestionsEl, item);
+          currentCandidates = candidates;
+          renderCandidateList();
           let status = candidates.length
             ? `${candidates.length} ORCID candidate(s) available.`
             : "No ORCID candidates found.";
@@ -559,43 +685,13 @@ LIMIT 200`;
           }
           statusEl.textContent = status;
         } catch (error) {
-          suggestionsEl.innerHTML = `<p class="error">${error.message}</p>`;
           statusEl.textContent = `Error: ${error.message}`;
-        } finally {
-          button.disabled = false;
-          button.textContent = originalText;
         }
       }
 
-      function renderCandidateSuggestions(candidates, suggestionsEl, item) {
-        if (!candidates.length) {
-          suggestionsEl.innerHTML = "<p class=\"suggestion-meta\">No ORCID candidates found.</p>";
-          return;
-        }
-        suggestionsEl.innerHTML = "";
-        candidates.forEach((candidate) => {
-          const div = document.createElement("div");
-          div.className = "suggestion-item";
-          const left = document.createElement("div");
-          left.innerHTML = `
-            <strong>${candidate.name || candidate.orcid}</strong>
-            <div class="suggestion-meta">${candidate.dois
-              .map((doi) => `<code>${doi}</code>`)
-              .join(" ")}</div>
-          `;
-          const actions = document.createElement("div");
-          actions.className = "suggestion-actions";
-          const button = document.createElement("button");
-          button.textContent = "Add ORCID";
-          button.addEventListener("click", () => {
-            upsertQueue({ qid: item.qid, label: item.label, orcid: candidate.orcid });
-          });
-          actions.appendChild(button);
-          div.appendChild(left);
-          div.appendChild(actions);
-          suggestionsEl.appendChild(div);
-        });
-      }
+      const CROSSREF_BASE = "https://api.crossref.org/works/";
+      const CROSSREF_HEADERS = { Accept: "application/json" };
+      const SCHOLARLY_ENDPOINT = "https://query-scholarly.wikidata.org/sparql";
 
       function fetchCrossref(doi) {
         const url = CROSSREF_BASE + encodeURIComponent(doi);
@@ -630,14 +726,6 @@ LIMIT 200`;
           }
         });
         return Array.from(dois);
-      }
-
-      function fetchCrossref(doi) {
-        const url = CROSSREF_BASE + encodeURIComponent(doi);
-        return fetch(url, { headers: CROSSREF_HEADERS }).then((resp) => {
-          if (!resp.ok) throw new Error(`Crossref error (${resp.status})`);
-          return resp.json();
-        });
       }
 
       function formatAuthorName(author) {
@@ -677,6 +765,22 @@ LIMIT 200`;
         const cleaned = value.toUpperCase().trim();
         const match = cleaned.match(/\b\d{4}-\d{4}-\d{4}-\d{3}[\dX]\b/);
         return match ? match[0] : null;
+      }
+
+      function applyRowFilter(items) {
+        if (!items.length) return [];
+        if (!filterValue) return items;
+        return items.filter((item) => {
+          const haystack = [
+            item.label,
+            item.qid,
+            ...(item.dois || []),
+          ]
+            .filter(Boolean)
+            .map((value) => value.toString().toLowerCase())
+            .join(" ");
+          return haystack.includes(filterValue);
+        });
       }
 
       function upsertQueue(entry) {
@@ -722,13 +826,11 @@ LIMIT 200`;
 
       openBtn.addEventListener("click", () => {
         if (!QUEUE.length) return;
-        const lines = QUEUE.map((item) => {
-          return [
-            item.qid,
-            "P496",
-            `"${item.orcid}"`,
-          ].join("\t");
-        });
+        const lines = QUEUE.map((item) => [
+          item.qid,
+          "P496",
+          `"${item.orcid}"`,
+        ].join("\t"));
         openQuickStatements(lines);
       });
 
@@ -744,19 +846,8 @@ LIMIT 200`;
         window.open(url, "_blank", "noopener");
       }
 
-
-      function pad2(x) {
-        return String(x || "").padStart(2, "0");
-      }
-
-      function todayQS() {
-        const t = new Date();
-        const y = t.getUTCFullYear();
-        const m = pad2(t.getUTCMonth() + 1);
-        const d = pad2(t.getUTCDate());
-        return `+${y}-${m}-${d}T00:00:00Z/11`;
-      }
-
+      renderResults(latestResults);
+      renderCandidateList();
       renderQueue();
     </script>
   </body>
