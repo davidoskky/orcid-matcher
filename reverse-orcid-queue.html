@@ -206,6 +206,11 @@
         font-size: 0.8rem;
         font-weight: 500;
       }
+      .author-meta .disambig-link {
+        color: #b45309;
+        font-size: 0.8rem;
+        font-weight: 500;
+      }
 
       .author-count {
         font-weight: 500;
@@ -582,6 +587,7 @@ LIMIT 200`;
               <div class="author-meta">
                 <a class="author-qid" href="https://www.wikidata.org/wiki/${item.qid}" target="_blank" rel="noopener">${item.qid}</a>
                 <a class="scholia-link" href="https://scholia.toolforge.org/author/${item.qid}" target="_blank" rel="noopener">Scholia</a>
+                <a class="disambig-link" href="https://author-disambiguator.toolforge.org/author_item_oauth.php?id=${item.qid}&doit=Get+author+data&filter=" target="_blank" rel="noopener">Disambig</a>
                 <span class="author-count">${countText}</span>
               </div>
               ${doiHtml}
