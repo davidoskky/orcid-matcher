@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Reverse ORCID queue</title>
+    <style>
+      :root {
+        font-family: "Segoe UI", "Roboto", sans-serif;
+        color: #0f172a;
+      }
+      body {
+        margin: 0;
+        padding: 2rem;
+        background: #eef2ff;
+      }
+      h1 {
+        margin-top: 0;
+      }
+      .panel {
+        max-width: 1500px;
+        width: min(1360px, 100%);
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 12px 48px rgba(15, 23, 42, 0.12);
+      }
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .controls textarea {
+        width: 100%;
+        min-height: 160px;
+        border-radius: 12px;
+        padding: 0.9rem;
+        border: 1px solid #cbd5f5;
+        font-family: "JetBrains Mono", "Fira Code", monospace;
+        background: #f8fafc;
+        box-shadow: inset 0 1px 4px rgba(15, 23, 42, 0.08);
+      }
+      .controls-row {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .controls button {
+        padding: 0.55rem 1.4rem;
+        background: #2563eb;
+        border: none;
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+      }
+      .controls button:disabled {
+        opacity: 0.6;
+        cursor: progress;
+        box-shadow: none;
+      }
+      .controls-row input {
+        flex: 1;
+        min-width: 220px;
+        padding: 0.55rem 0.9rem;
+        border-radius: 8px;
+        border: 1px solid #cbd5f5;
+        font-size: 0.95rem;
+        background: #fff;
+      }
+      .status {
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        color: #475569;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+      }
+      .card {
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 1rem;
+        border: 1px solid #e0e7ff;
+      }
+      .card h2 {
+        margin: 0 0 0.4rem;
+      }
+      .list {
+        margin: 1rem 0 0;
+        max-height: 420px;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+      }
+      .row {
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 1rem;
+        border: 1px solid #dbeafe;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .row-content {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: flex-start;
+      }
+      .row-body {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .row-body a {
+        color: #1d4ed8;
+        font-weight: 700;
+        text-decoration: none;
+        font-size: 1rem;
+      }
+      .row small {
+        color: #475569;
+        font-size: 0.9rem;
+      }
+      .doi-meta {
+        font-size: 0.85rem;
+        color: #475569;
+        margin-top: 0.4rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+      }
+      .doi-meta code {
+        background: #eef2ff;
+        padding: 0 0.35rem;
+        border-radius: 3px;
+        border: 1px solid #c7d2fe;
+      }
+      .suggestions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        background: #f1f5ff;
+        border-radius: 10px;
+        padding: 0.6rem 0.8rem;
+        max-height: 220px;
+        overflow: auto;
+      }
+      .suggestions::-webkit-scrollbar {
+        height: 6px;
+      }
+      .suggestions::-webkit-scrollbar-thumb {
+        background: rgba(37, 99, 235, 0.4);
+        border-radius: 999px;
+      }
+      .suggestion-item {
+        padding: 0.7rem;
+        border-radius: 8px;
+        border: 1px solid #e0e7ff;
+        background: #ffffff;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      .suggestion-item strong {
+        display: block;
+        font-size: 0.95rem;
+      }
+      .suggestion-meta {
+        font-size: 0.8rem;
+        color: #475569;
+      }
+      .suggestion-actions button {
+        padding: 0.35rem 0.75rem;
+        border-radius: 6px;
+        border: 1px solid #a5b4fc;
+        background: #eff6ff;
+        color: #1d4ed8;
+        cursor: pointer;
+      }
+      .row-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        align-items: flex-end;
+      }
+      .row-actions button {
+        padding: 0.55rem 1rem;
+        background: #0f172a;
+        border-radius: 6px;
+        border: none;
+        color: #fff;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+      .row-status {
+        font-size: 0.8rem;
+        color: #475569;
+      }
+      .queue {
+        margin-top: 1rem;
+        border-radius: 10px;
+        border: 1px solid #c7d2fe;
+        padding: 1rem;
+        background: #f8fafc;
+      }
+      .queue h3 {
+        margin-top: 0;
+      }
+      .queue-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        max-height: 220px;
+        overflow: auto;
+      }
+      .queue-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #ffffff;
+        border: 1px solid #dbeafe;
+        padding: 0.4rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+      }
+      .queue-actions {
+        margin-top: 0.8rem;
+        display: flex;
+        gap: 0.6rem;
+      }
+      .queue-actions button {
+        padding: 0.5rem 1.2rem;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .open-qs {
+        background: #0f172a;
+        color: #fff;
+      }
+      .clear-queue {
+        background: transparent;
+        border: 1px solid #475569;
+        color: #475569;
+      }
+      .small-link {
+        color: #475569;
+        text-decoration: none;
+        font-size: 0.8rem;
+      }
+      @media (max-width: 600px) {
+        .row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <h1>Queue ORCID additions</h1>
+      <p>
+        Run a SPARQL query (via Qlever) to find authors with DOIs published after 2020 who
+        still lack an ORCID (P496). Enter ORCIDs for the people you are confident about and
+        queue them for a batch QuickStatements export.
+      </p>
+      <div class="controls">
+        <textarea id="query" spellcheck="false"></textarea>
+        <div class="controls-row">
+          <button id="run-query">Run query</button>
+          <button id="find-all" type="button">Find ORCID for all visible</button>
+          <input id="row-filter" type="search" placeholder="Filter researchers (name, ORCID, DOI)" />
+        </div>
+        <p class="status" id="status">Ready.</p>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <h2>Results</h2>
+          <div class="list" id="result-list"></div>
+        </div>
+        <div class="card">
+          <h2>Queue</h2>
+          <div class="queue" id="queue">
+            <h3>No entries yet</h3>
+            <div class="queue-list" id="queue-list"></div>
+            <div class="queue-actions">
+              <button class="open-qs" id="open-qs" disabled>Open QuickStatements</button>
+              <button class="clear-queue" id="clear-queue" disabled>Clear queue</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="small-link">
+        Powered by Wikidata SPARQL + Crossref &mdash; generated on the client in your browser.
+      </p>
+    </div>
+    <script>
+      const resultList = document.getElementById("result-list");
+      const queueList = document.getElementById("queue-list");
+      const statusEl = document.getElementById("status");
+      const openBtn = document.getElementById("open-qs");
+      const clearBtn = document.getElementById("clear-queue");
+      const textarea = document.getElementById("query");
+      const runBtn = document.getElementById("run-query");
+
+      const QUEUE = [];
+      const filterInput = document.getElementById("row-filter");
+      let latestResults = [];
+      let filterValue = "";
+      const findAllBtn = document.getElementById("find-all");
+      const rowMap = new Map();
+      const DEFAULT_QUERY = `PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+SELECT DISTINCT ?person ?personLabel ?doi WHERE {
+  SERVICE <https://query-scholarly.wikidata.org/sparql> {
+    SELECT DISTINCT ?personId ?doi WHERE {
+      ?work wdt:P356 ?doi ;
+            wdt:P50 ?person ;
+            wdt:P577 ?date .
+      FILTER(?date > "2020-12-31T23:59:59Z"^^xsd:dateTime)
+      BIND(STRAFTER(STR(?person), "entity/") AS ?personId)
+      BIND(SHA256(?personId) AS ?h)
+      FILTER( STRSTARTS(?h, SUBSTR(STR(RAND()), 3, 1)) )
+    }
+    LIMIT 500
+  }
+  BIND(IRI(CONCAT("http://www.wikidata.org/entity/", ?personId)) AS ?person)
+  FILTER NOT EXISTS { ?person wdt:P496 [] }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}
+LIMIT 200`;
+      textarea.textContent = DEFAULT_QUERY;
+
+      runBtn.addEventListener("click", async () => {
+        if (!textarea.value.trim()) return;
+        runBtn.disabled = true;
+        statusEl.textContent = "Querying Wikidata...";
+        resultList.innerHTML = "";
+        try {
+          const data = await fetchQuery(textarea.value);
+          renderResults(data);
+        } catch (error) {
+          statusEl.textContent = `Error: ${error.message}`;
+        } finally {
+          runBtn.disabled = false;
+        }
+      });
+
+      filterInput.addEventListener("input", () => {
+        filterValue = filterInput.value.trim().toLowerCase();
+        renderResults(latestResults);
+      });
+
+      findAllBtn.addEventListener("click", async () => {
+        const filtered = applyRowFilter(latestResults);
+        if (!filtered.length) return;
+        findAllBtn.disabled = true;
+        statusEl.textContent = "Loading ORCID candidates for visible researchers...";
+        for (const item of filtered) {
+          const meta = rowMap.get(item.qid);
+          if (!meta) continue;
+          try {
+            await loadCandidates(item, meta.suggestionsEl, meta.button, meta.statusSpan);
+          } catch (error) {
+            console.warn("batch load error", item.qid, error);
+          }
+        }
+        findAllBtn.disabled = false;
+        statusEl.textContent = `Loaded ORCID candidates for ${filtered.length} researcher(s).`;
+      });
+
+      async function fetchQuery(sparql) {
+        const url = "https://query.wikidata.org/sparql";
+        const resp = await fetch(url, {
+          method: "POST",
+          headers: {
+            Accept: "application/sparql-results+json",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: "query=" + encodeURIComponent(sparql),
+        });
+        if (!resp.ok) throw new Error(`SPARQL error (${resp.status})`);
+        const json = await resp.json();
+        const bindings = json?.results?.bindings || [];
+        const people = new Map();
+        for (const binding of bindings) {
+          const qid = binding.person.value.split("/").pop();
+          const label = binding.personLabel?.value || qid;
+          const doi = binding.doi?.value;
+          if (!people.has(qid)) {
+            people.set(qid, { qid, label, dois: new Set() });
+          }
+          if (doi) {
+            people.get(qid).dois.add(doi);
+          }
+        }
+        return Array.from(people.values()).map((entry) => ({
+          qid: entry.qid,
+          label: entry.label,
+          dois: Array.from(entry.dois),
+        }));
+      }
+
+      const CROSSREF_BASE = "https://api.crossref.org/works/";
+      const CROSSREF_HEADERS = { Accept: "application/json" };
+      const SCHOLARLY_ENDPOINT = "https://query-scholarly.wikidata.org/sparql";
+      const candidateCache = new Map();
+
+      function renderResults(results) {
+        latestResults = Array.isArray(results) ? results : [];
+        const filtered = applyRowFilter(latestResults);
+        rowMap.clear();
+        if (!latestResults.length) {
+          resultList.innerHTML = "<p>No results.</p>";
+          statusEl.textContent = "No researchers found.";
+          findAllBtn.disabled = true;
+          return;
+        }
+        if (!filtered.length) {
+          resultList.innerHTML = "<p>No researchers match the filter.</p>";
+          findAllBtn.disabled = true;
+        } else {
+          resultList.innerHTML = "";
+          filtered.forEach((item) => {
+            const row = document.createElement("div");
+            row.className = "row";
+            row.dataset.qid = item.qid;
+            const doiHtml = item.dois.length
+              ? item.dois.map((doi) => `<code>${doi}</code>`).join(" ")
+              : "<em>No DOI captured</em>";
+            row.innerHTML = `
+              <div class="row-content">
+                <div class="row-body">
+                  <a href="https://www.wikidata.org/wiki/${item.qid}" target="_blank">${item.label}</a>
+                  <small>${item.qid}</small>
+                  <div class="doi-meta">${doiHtml}</div>
+                </div>
+                <div class="row-actions">
+                  <button type="button" class="load-candidates">Find ORCID candidates</button>
+                  <span class="row-status"></span>
+                </div>
+              </div>
+              <div class="suggestions" data-qid="${item.qid}"></div>
+            `;
+            const button = row.querySelector(".load-candidates");
+            const statusSpan = row.querySelector(".row-status");
+            const suggestionsEl = row.querySelector(".suggestions");
+            button.addEventListener("click", () =>
+              loadCandidates(item, suggestionsEl, button, statusSpan)
+            );
+            const doiMeta = row.querySelector(".doi-meta");
+            rowMap.set(item.qid, { button, statusSpan, suggestionsEl, doiMeta });
+            resultList.appendChild(row);
+          });
+          findAllBtn.disabled = false;
+        }
+        if (filterValue) {
+          statusEl.textContent = `Showing ${filtered.length}/${latestResults.length} researchers matching filter.`;
+          findAllBtn.disabled = filtered.length === 0;
+        } else {
+          statusEl.textContent = `Found ${latestResults.length} potential researchers.`;
+        }
+      }
+
+      function applyRowFilter(items) {
+        if (!items.length) return [];
+        if (!filterValue) return items;
+        return items.filter((item) => {
+          const haystack = [
+            item.label,
+            item.qid,
+            ...(item.dois || []),
+          ]
+            .filter(Boolean)
+            .map((value) => value.toString().toLowerCase())
+            .join(" ");
+          return haystack.includes(filterValue);
+        });
+      }
+
+      async function loadCandidates(item, suggestionsEl, button, statusEl) {
+        const key = item.qid;
+        if (candidateCache.has(key)) {
+          const cached = candidateCache.get(key);
+          renderCandidateSuggestions(cached, suggestionsEl, item);
+          statusEl.textContent = `${cached.length} cached candidate(s)`;
+          return;
+        }
+        button.disabled = true;
+        const originalText = button.textContent;
+        button.textContent = "Loading…";
+        statusEl.textContent = "";
+        const missingDois = [];
+        const map = new Map();
+        if (!item.dois?.length) {
+          try {
+            item.dois = await fetchPersonDois(item.qid);
+            const meta = rowMap.get(item.qid);
+            if (meta?.doiMeta) {
+              const doiHtml = item.dois.length
+                ? item.dois.map((doi) => `<code>${doi}</code>`).join(" ")
+                : "<em>No DOI captured</em>";
+              meta.doiMeta.innerHTML = doiHtml;
+            }
+          } catch (error) {
+            statusEl.textContent = `DOI lookup failed: ${error.message}`;
+          }
+        }
+        try {
+          for (const doi of item.dois) {
+            if (!doi) continue;
+            try {
+              const data = await fetchCrossref(doi);
+              const authors = Array.isArray(data?.message?.author)
+                ? data.message.author
+                : [];
+              for (const author of authors) {
+                const orcid = normalizeOrcid(author?.ORCID || author?.orcid);
+                if (!orcid) continue;
+                const entry =
+                  map.get(orcid) || {
+                    orcid,
+                    name: formatAuthorName(author),
+                    dois: new Set(),
+                  };
+                entry.name = entry.name || formatAuthorName(author);
+                entry.dois.add(doi);
+                map.set(orcid, entry);
+              }
+            } catch (error) {
+              console.warn("Crossref lookup failed", doi, error);
+              missingDois.push(doi);
+            }
+          }
+          const candidates = Array.from(map.values()).map((entry) => ({
+            orcid: entry.orcid,
+            name: entry.name,
+            dois: Array.from(entry.dois),
+          }));
+          candidateCache.set(key, candidates);
+          renderCandidateSuggestions(candidates, suggestionsEl, item);
+          let status = candidates.length
+            ? `${candidates.length} ORCID candidate(s) available.`
+            : "No ORCID candidates found.";
+          if (missingDois.length) {
+            status += ` Missing DOIs: ${missingDois.join(", ")}`;
+          }
+          statusEl.textContent = status;
+        } catch (error) {
+          suggestionsEl.innerHTML = `<p class="error">${error.message}</p>`;
+          statusEl.textContent = `Error: ${error.message}`;
+        } finally {
+          button.disabled = false;
+          button.textContent = originalText;
+        }
+      }
+
+      function renderCandidateSuggestions(candidates, suggestionsEl, item) {
+        if (!candidates.length) {
+          suggestionsEl.innerHTML = "<p class=\"suggestion-meta\">No ORCID candidates found.</p>";
+          return;
+        }
+        suggestionsEl.innerHTML = "";
+        candidates.forEach((candidate) => {
+          const div = document.createElement("div");
+          div.className = "suggestion-item";
+          const left = document.createElement("div");
+          left.innerHTML = `
+            <strong>${candidate.name || candidate.orcid}</strong>
+            <div class="suggestion-meta">${candidate.dois
+              .map((doi) => `<code>${doi}</code>`)
+              .join(" ")}</div>
+          `;
+          const actions = document.createElement("div");
+          actions.className = "suggestion-actions";
+          const button = document.createElement("button");
+          button.textContent = "Add ORCID";
+          button.addEventListener("click", () => {
+            upsertQueue({ qid: item.qid, label: item.label, orcid: candidate.orcid });
+          });
+          actions.appendChild(button);
+          div.appendChild(left);
+          div.appendChild(actions);
+          suggestionsEl.appendChild(div);
+        });
+      }
+
+      function fetchCrossref(doi) {
+        const url = CROSSREF_BASE + encodeURIComponent(doi);
+        return fetch(url, { headers: CROSSREF_HEADERS }).then((resp) => {
+          if (!resp.ok) throw new Error(`Crossref error (${resp.status})`);
+          return resp.json();
+        });
+      }
+
+      async function fetchPersonDois(qid) {
+        const sparql = `SELECT DISTINCT ?work ?doi WHERE {
+  ?work wdt:P50 wd:${qid} ;
+        wdt:P356 ?doi .
+}
+ORDER BY ?work
+LIMIT 200`;
+        const resp = await fetch(SCHOLARLY_ENDPOINT, {
+          method: "POST",
+          headers: {
+            Accept: "application/sparql-results+json",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: "query=" + encodeURIComponent(sparql),
+        });
+        if (!resp.ok) throw new Error(`Scholarly query failed (${resp.status})`);
+        const data = await resp.json();
+        const dois = new Set();
+        (data?.results?.bindings || []).forEach((binding) => {
+          const value = binding?.doi?.value;
+          if (value) {
+            dois.add(value.toUpperCase());
+          }
+        });
+        return Array.from(dois);
+      }
+
+      function fetchCrossref(doi) {
+        const url = CROSSREF_BASE + encodeURIComponent(doi);
+        return fetch(url, { headers: CROSSREF_HEADERS }).then((resp) => {
+          if (!resp.ok) throw new Error(`Crossref error (${resp.status})`);
+          return resp.json();
+        });
+      }
+
+      function formatAuthorName(author) {
+        if (!author) return null;
+        const given = nameValue(author.given || author["given-names"]);
+        const family = nameValue(author.family || author["family-names"]);
+        if (given && family) return `${given} ${family}`;
+        return nameValue(author.name) || nameValue(author["credit-name"]);
+      }
+
+      function nameValue(value) {
+        if (value == null) return null;
+        if (typeof value === "string") {
+          const trimmed = value.trim();
+          return trimmed || null;
+        }
+        if (Array.isArray(value)) {
+          for (const item of value) {
+            const resolved = nameValue(item);
+            if (resolved) return resolved;
+          }
+          return null;
+        }
+        if (typeof value === "object") {
+          if ("value" in value) {
+            return nameValue(value.value);
+          }
+          if ("name" in value) {
+            return nameValue(value.name);
+          }
+        }
+        return null;
+      }
+
+      function normalizeOrcid(value) {
+        if (!value) return null;
+        const cleaned = value.toUpperCase().trim();
+        const match = cleaned.match(/\b\d{4}-\d{4}-\d{4}-\d{3}[\dX]\b/);
+        return match ? match[0] : null;
+      }
+
+      function upsertQueue(entry) {
+        const exists = QUEUE.find((item) => item.qid === entry.qid);
+        if (exists) {
+          exists.orcid = entry.orcid;
+          exists.label = entry.label;
+        } else {
+          QUEUE.push(entry);
+        }
+        renderQueue();
+      }
+
+      function renderQueue() {
+        queueList.innerHTML = "";
+        if (!QUEUE.length) {
+          queueList.innerHTML = "<p>Add a researcher above to build your queue.</p>";
+          openBtn.disabled = true;
+          clearBtn.disabled = true;
+          return;
+        }
+        QUEUE.forEach((item, idx) => {
+          const div = document.createElement("div");
+          div.className = "queue-item";
+          div.innerHTML = `
+            <span>${item.label} (${item.qid}) → ${item.orcid}</span>
+            <button type="button" data-index="${idx}">Remove</button>
+          `;
+          div.querySelector("button").addEventListener("click", () => {
+            QUEUE.splice(idx, 1);
+            renderQueue();
+          });
+          queueList.appendChild(div);
+        });
+        openBtn.disabled = false;
+        clearBtn.disabled = false;
+      }
+
+      clearBtn.addEventListener("click", () => {
+        QUEUE.length = 0;
+        renderQueue();
+      });
+
+      openBtn.addEventListener("click", () => {
+        if (!QUEUE.length) return;
+        const lines = QUEUE.map((item) => {
+          return [
+            item.qid,
+            "P496",
+            `"${item.orcid}"`,
+          ].join("\t");
+        });
+        openQuickStatements(lines);
+      });
+
+      function openQuickStatements(lines) {
+        const raw = lines.join("\n");
+        const v1urlText = raw
+          .trim()
+          .replace(/\r\n?/g, "\n")
+          .replace(/\t/g, "|")
+          .replace(/\n/g, "||");
+        const url = "https://qs-dev.toolforge.org/batch/new?v1=" +
+          encodeURIComponent(v1urlText);
+        window.open(url, "_blank", "noopener");
+      }
+
+
+      function pad2(x) {
+        return String(x || "").padStart(2, "0");
+      }
+
+      function todayQS() {
+        const t = new Date();
+        const y = t.getUTCFullYear();
+        const m = pad2(t.getUTCMonth() + 1);
+        const d = pad2(t.getUTCDate());
+        return `+${y}-${m}-${d}T00:00:00Z/11`;
+      }
+
+      renderQueue();
+    </script>
+  </body>
+</html>
