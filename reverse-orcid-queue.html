@@ -93,7 +93,7 @@
       .master-detail {
         flex: 1;
         display: grid;
-        grid-template-columns: 300px minmax(0, 1fr);
+        grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr);
         gap: 1rem;
         min-height: 0;
         height: calc(100vh - 2rem);
@@ -188,7 +188,7 @@
         font-size: 1rem;
         margin: 0;
       }
-      .author-row .author-meta {
+      .author-row       .author-meta {
         display: flex;
         flex-wrap: wrap;
         gap: 0.5rem;
@@ -201,6 +201,12 @@
         text-decoration: none;
         font-weight: 600;
       }
+      .author-meta .scholia-link {
+        color: #15803d;
+        font-size: 0.8rem;
+        font-weight: 500;
+      }
+
       .author-count {
         font-weight: 500;
         color: #1e293b;
@@ -584,19 +590,21 @@ LIMIT 200`;
               row.classList.add("selected");
             }
             const doiHtml = item.dois.length
-              ? `<div class=\"doi-meta\">${item.dois
+              ? `<div class="doi-meta">${item.dois
                   .map((doi) => `<code>${doi}</code>`)
                   .join(" ")}</div>`
-              : `<div class=\"doi-meta\"><em>No DOI captured</em></div>`;
+              : `<div class="doi-meta"><em>No DOI captured</em></div>`;
             const countText = getAuthorCandidateCountText(item.qid);
             row.innerHTML = `
-              <span class=\"author-name\">${item.label}</span>
-              <div class=\"author-meta\">
-                <a class=\"author-qid\" href=\"https://www.wikidata.org/wiki/${item.qid}\" target=\"_blank\" rel=\"noopener\">${item.qid}</a>
-                <span class=\"author-count\">${countText}</span>
+              <span class="author-name">${item.label}</span>
+              <div class="author-meta">
+                <a class="author-qid" href="https://www.wikidata.org/wiki/${item.qid}" target="_blank" rel="noopener">${item.qid}</a>
+                <a class="scholia-link" href="https://scholia.toolforge.org/author/${item.qid}" target="_blank" rel="noopener">Scholia</a>
+                <span class="author-count">${countText}</span>
               </div>
               ${doiHtml}
             `;
+
             row.addEventListener("click", () => handleAuthorSelect(item));
             row.addEventListener("keydown", (event) => {
               if (event.key === "Enter" || event.key === " ") {
@@ -633,13 +641,20 @@ LIMIT 200`;
           return;
         }
         candidateTitleEl.textContent = selectedAuthor.label;
-        candidateSubtitleEl.textContent = selectedAuthor.qid;
+        candidateSubtitleEl.textContent = `${selectedAuthor.qid} · sorted by name similarity`;
         candidateFilterInput.disabled = false;
+        const targetName = selectedAuthor?.label || "";
         const filterTerm = candidateFilterInput.value.trim().toLowerCase();
-        const matches = currentCandidates.filter((candidate) => {
-          const name = (candidate.name || "").toLowerCase();
-          return name.includes(filterTerm);
-        });
+        const matches = currentCandidates
+          .map((candidate) => ({
+            candidate,
+            similarity: calculateNameSimilarity(candidate.name || candidate.orcid, targetName),
+          }))
+          .filter(({ candidate }) => {
+            const name = (candidate.name || candidate.orcid || "").toLowerCase();
+            return name.includes(filterTerm);
+          })
+          .sort((a, b) => b.similarity - a.similarity);
         if (!matches.length) {
           candidateListEl.innerHTML = currentCandidates.length
             ? "<div class=\"empty-state\">No candidates match that name filter.</div>"
@@ -647,7 +662,7 @@ LIMIT 200`;
           return;
         }
         candidateListEl.innerHTML = "";
-        matches.forEach((candidate) => {
+        matches.forEach(({ candidate }) => {
           const card = document.createElement("article");
           card.className = "candidate-card";
           card.innerHTML = `
@@ -850,6 +865,38 @@ LIMIT 200`;
             .join(" ");
           return haystack.includes(filterValue);
         });
+      }
+
+      function normalizeNameForComparison(value) {
+        return (value || "").toString().toLowerCase().replace(/\s+/g, " ").trim();
+      }
+
+      function levenshteinDistance(a, b) {
+        const rows = a.length + 1;
+        const cols = b.length + 1;
+        const dp = Array.from({ length: rows }, () => Array(cols).fill(0));
+        for (let i = 0; i < rows; i += 1) {
+          dp[i][0] = i;
+        }
+        for (let j = 0; j < cols; j += 1) {
+          dp[0][j] = j;
+        }
+        for (let i = 1; i < rows; i += 1) {
+          for (let j = 1; j < cols; j += 1) {
+            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+            dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+          }
+        }
+        return dp[a.length][b.length];
+      }
+
+      function calculateNameSimilarity(name, target) {
+        const normalizedName = normalizeNameForComparison(name);
+        const normalizedTarget = normalizeNameForComparison(target);
+        if (!normalizedName || !normalizedTarget) return 0;
+        const distance = levenshteinDistance(normalizedName, normalizedTarget);
+        const maxLength = Math.max(normalizedName.length, normalizedTarget.length);
+        return maxLength ? 1 - distance / maxLength : 0;
       }
 
       function getAuthorCandidateCountText(qid) {
