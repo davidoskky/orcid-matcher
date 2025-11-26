@@ -449,6 +449,7 @@
       const candidateCache = new Map();
       const authorRowMap = new Map();
       const candidateCounts = new Map();
+      const candidateLoadPromises = new Map();
       let latestResults = [];
       let selectedAuthor = null;
       let currentCandidates = [];
@@ -616,6 +617,7 @@ LIMIT 200`;
           statusEl.textContent = `Found ${latestResults.length} potential researchers.`;
         }
         renderCandidateList();
+        autoLoadCandidatesFor(filtered);
       }
 
       function renderCandidateList() {
@@ -680,21 +682,25 @@ LIMIT 200`;
         if (candidateCache.has(key)) {
           currentCandidates = candidateCache.get(key);
           renderCandidateList();
-          updateAuthorCandidateCount(key, currentCandidates.length);
+          setAuthorCandidateState(key, currentCandidates.length, false);
           statusEl.textContent = `${currentCandidates.length} cached candidate(s) for ${item.label}.`;
           return;
         }
-        statusEl.textContent = `Gathering ORCID candidates for ${item.label}...`;
-        const missingDois = [];
-        if (!item.dois?.length) {
-          try {
-            item.dois = await fetchPersonDois(item.qid);
-          } catch (error) {
-            console.warn("DOI lookup failed", error);
-          }
+        if (candidateLoadPromises.has(key)) {
+          return candidateLoadPromises.get(key);
         }
-        const map = new Map();
-        try {
+        markAuthorLoading(key);
+        statusEl.textContent = `Gathering ORCID candidates for ${item.label}...`;
+        const loadPromise = (async () => {
+          const missingDois = [];
+          if (!item.dois?.length) {
+            try {
+              item.dois = await fetchPersonDois(item.qid);
+            } catch (error) {
+              console.warn("DOI lookup failed", error);
+            }
+          }
+          const map = new Map();
           for (const doi of item.dois || []) {
             if (!doi) continue;
             try {
@@ -726,7 +732,7 @@ LIMIT 200`;
             dois: Array.from(entry.dois),
           }));
           candidateCache.set(key, candidates);
-          updateAuthorCandidateCount(key, candidates.length);
+          setAuthorCandidateState(key, candidates.length, false);
           currentCandidates = candidates;
           renderCandidateList();
           let status = candidates.length
@@ -736,9 +742,15 @@ LIMIT 200`;
             status += ` Missing DOIs: ${missingDois.join(", ")}`;
           }
           statusEl.textContent = status;
-        } catch (error) {
+        })().catch((error) => {
+          setAuthorCandidateState(key, candidateCounts.get(key)?.count ?? 0, false);
           statusEl.textContent = `Error: ${error.message}`;
-        }
+          throw error;
+        }).finally(() => {
+          candidateLoadPromises.delete(key);
+        });
+        candidateLoadPromises.set(key, loadPromise);
+        return loadPromise;
       }
 
       const CROSSREF_BASE = "https://api.crossref.org/works/";
@@ -836,21 +848,42 @@ LIMIT 200`;
       }
 
       function getAuthorCandidateCountText(qid) {
-        const count = candidateCounts.get(qid) ?? 0;
+        const entry = candidateCounts.get(qid);
+        if (!entry) return "0 candidates";
+        if (entry.loading) return "Loading…";
+        const count = entry.count ?? 0;
         return `${count} candidate${count === 1 ? "" : "s"}`;
       }
 
-      function updateAuthorCandidateCount(qid, count) {
-        candidateCounts.set(qid, count);
+      function refreshAuthorCount(qid) {
         const row = authorRowMap.get(qid);
         if (!row) return;
-        const countEl = row.querySelector(".author-count");
-        if (countEl) {
-          countEl.textContent = `${count} candidate${count === 1 ? "" : "s"}`;
+        const badge = row.querySelector(".author-count");
+        if (badge) {
+          badge.textContent = getAuthorCandidateCountText(qid);
         }
       }
 
+      function setAuthorCandidateState(qid, count, loading = false) {
+        candidateCounts.set(qid, { count, loading });
+        refreshAuthorCount(qid);
+      }
+
+      function markAuthorLoading(qid) {
+        const current = candidateCounts.get(qid) || { count: 0 };
+        setAuthorCandidateState(qid, current.count ?? 0, true);
+      }
+
+      function autoLoadCandidatesFor(items) {
+        items.forEach((item) => {
+          loadCandidates(item).catch((error) => {
+            console.warn("Auto load error", item.qid, error);
+          });
+        });
+      }
+
       function upsertQueue(entry) {
+
         const exists = QUEUE.find((item) => item.qid === entry.qid);
         if (exists) {
           exists.orcid = entry.orcid;
