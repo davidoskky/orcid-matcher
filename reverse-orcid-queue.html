@@ -668,6 +668,7 @@ LIMIT 200`;
 
       function handleAuthorSelect(author) {
         selectedAuthor = author;
+        candidateFilterInput.value = "";
         currentCandidates = candidateCache.get(author.qid) || [];
         renderResults(latestResults);
         loadCandidates(author).catch((error) => {
