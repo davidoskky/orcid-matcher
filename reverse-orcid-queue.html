@@ -179,6 +179,10 @@
         border-color: #2563eb;
         background: #eef2ff;
       }
+      .author-row.queued {
+        border-color: #65a30d;
+        background: #f0fdf4;
+      }
       .author-row .author-name {
         font-weight: 600;
         font-size: 1rem;
@@ -450,6 +454,7 @@
       const authorRowMap = new Map();
       const candidateCounts = new Map();
       const candidateLoadPromises = new Map();
+      const queuedAuthors = new Set();
       let latestResults = [];
       let selectedAuthor = null;
       let currentCandidates = [];
@@ -604,6 +609,7 @@ LIMIT 200`;
               qLink.addEventListener("click", (event) => event.stopPropagation());
             }
             authorRowMap.set(item.qid, row);
+            applyAuthorQueuedClass(item.qid);
             updateAuthorVisibility(item.qid);
             authorListEl.appendChild(row);
           });
@@ -894,8 +900,22 @@ LIMIT 200`;
         row.style.display = shouldHide ? "none" : "flex";
       }
 
-      function upsertQueue(entry) {
+      function applyAuthorQueuedClass(qid) {
+        const row = authorRowMap.get(qid);
+        if (!row) return;
+        row.classList.toggle("queued", queuedAuthors.has(qid));
+      }
 
+      function setAuthorQueuedState(qid, queued) {
+        if (queued) {
+          queuedAuthors.add(qid);
+        } else {
+          queuedAuthors.delete(qid);
+        }
+        applyAuthorQueuedClass(qid);
+      }
+
+      function upsertQueue(entry) {
         const exists = QUEUE.find((item) => item.qid === entry.qid);
         if (exists) {
           exists.orcid = entry.orcid;
@@ -903,6 +923,7 @@ LIMIT 200`;
         } else {
           QUEUE.push(entry);
         }
+        setAuthorQueuedState(entry.qid, true);
         renderQueue();
       }
 
@@ -922,7 +943,8 @@ LIMIT 200`;
             <button type="button" data-index="${idx}">Remove</button>
           `;
           div.querySelector("button").addEventListener("click", () => {
-            QUEUE.splice(idx, 1);
+            const removed = QUEUE.splice(idx, 1);
+            removed.forEach((item) => setAuthorQueuedState(item.qid, false));
             renderQueue();
           });
           queueList.appendChild(div);
@@ -932,7 +954,9 @@ LIMIT 200`;
       }
 
       clearBtn.addEventListener("click", () => {
+        const queued = Array.from(queuedAuthors);
         QUEUE.length = 0;
+        queued.forEach((qid) => setAuthorQueuedState(qid, false));
         renderQueue();
       });
 
