@@ -133,6 +133,9 @@
         width: 100%;
       }
       .authors-panel {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
         overflow-y: auto;
       }
       .candidates-panel {
@@ -140,10 +143,12 @@
         overflow-y: auto;
       }
       .authors-list {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
         display: flex;
         flex-direction: column;
         gap: 0.6rem;
-        min-height: 0;
       }
       .author-row {
         border-radius: 12px;
@@ -174,8 +179,21 @@
         margin: 0;
       }
       .author-row .author-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
         font-size: 0.85rem;
         color: #475569;
+      }
+      .author-meta a {
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .author-count {
+        font-weight: 500;
+        color: #1e293b;
       }
       .doi-meta {
         display: flex;
@@ -234,6 +252,10 @@
         margin: 0;
         font-size: 0.85rem;
         color: #475569;
+      }
+      .candidate-meta a {
+        color: #2563eb;
+        text-decoration: none;
       }
       .candidate-actions button {
         padding: 0.55rem 0.95rem;
@@ -381,8 +403,8 @@
               id="candidate-filter"
               class="inline-field"
               type="search"
-              placeholder="Filter candidates by ORCID"
-              aria-label="Filter ORCID candidates"
+              placeholder="Filter candidates by name"
+              aria-label="Filter ORCID candidates by name"
               disabled
             />
           </div>
@@ -415,6 +437,8 @@
 
       const QUEUE = [];
       const candidateCache = new Map();
+      const authorRowMap = new Map();
+      const candidateCounts = new Map();
       let latestResults = [];
       let selectedAuthor = null;
       let currentCandidates = [];
@@ -524,6 +548,7 @@ LIMIT 200`;
           selectedAuthor = null;
           currentCandidates = [];
         }
+        authorRowMap.clear();
         authorListEl.innerHTML = "";
         if (!latestResults.length) {
           authorListEl.innerHTML = "<div class=\"empty-state\">Run the query to populate this list.</div>";
@@ -537,30 +562,41 @@ LIMIT 200`;
           findAllBtn.disabled = true;
         } else {
           filtered.forEach((item) => {
-            const button = document.createElement("button");
-            button.type = "button";
-            button.className = "author-row";
+            const row = document.createElement("div");
+            row.className = "author-row";
+            row.setAttribute("role", "button");
+            row.setAttribute("tabindex", "0");
+            row.dataset.qid = item.qid;
             if (selectedAuthor && selectedAuthor.qid === item.qid) {
-              button.classList.add("selected");
+              row.classList.add("selected");
             }
             const doiHtml = item.dois.length
               ? `<div class=\"doi-meta\">${item.dois
                   .map((doi) => `<code>${doi}</code>`)
                   .join(" ")}</div>`
               : `<div class=\"doi-meta\"><em>No DOI captured</em></div>`;
-            button.innerHTML = `
+            const countText = getAuthorCandidateCountText(item.qid);
+            row.innerHTML = `
               <span class=\"author-name\">${item.label}</span>
-              <span class=\"author-meta\">${item.qid}</span>
+              <div class=\"author-meta\">
+                <a class=\"author-qid\" href=\"https://www.wikidata.org/wiki/${item.qid}\" target=\"_blank\" rel=\"noopener\">${item.qid}</a>
+                <span class=\"author-count\">${countText}</span>
+              </div>
               ${doiHtml}
             `;
-            button.addEventListener("click", () => handleAuthorSelect(item));
-            button.addEventListener("keydown", (event) => {
+            row.addEventListener("click", () => handleAuthorSelect(item));
+            row.addEventListener("keydown", (event) => {
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
                 handleAuthorSelect(item);
               }
             });
-            authorListEl.appendChild(button);
+            const qLink = row.querySelector(".author-qid");
+            if (qLink) {
+              qLink.addEventListener("click", (event) => event.stopPropagation());
+            }
+            authorRowMap.set(item.qid, row);
+            authorListEl.appendChild(row);
           });
           findAllBtn.disabled = false;
         }
@@ -584,12 +620,13 @@ LIMIT 200`;
         candidateSubtitleEl.textContent = selectedAuthor.qid;
         candidateFilterInput.disabled = false;
         const filterTerm = candidateFilterInput.value.trim().toLowerCase();
-        const matches = currentCandidates.filter((candidate) =>
-          candidate.orcid.toLowerCase().includes(filterTerm)
-        );
+        const matches = currentCandidates.filter((candidate) => {
+          const name = (candidate.name || "").toLowerCase();
+          return name.includes(filterTerm);
+        });
         if (!matches.length) {
           candidateListEl.innerHTML = currentCandidates.length
-            ? "<div class=\"empty-state\">No candidates match that ORCID filter.</div>"
+            ? "<div class=\"empty-state\">No candidates match that name filter.</div>"
             : "<div class=\"empty-state\">No ORCID candidates loaded yet for this author.</div>";
           return;
         }
@@ -598,14 +635,17 @@ LIMIT 200`;
           const card = document.createElement("article");
           card.className = "candidate-card";
           card.innerHTML = `
-            <div class=\"candidate-info\">
-              <p class=\"candidate-name\">${candidate.name || candidate.orcid}</p>
-              <p class=\"candidate-meta\">${candidate.orcid}</p>
+            <div class="candidate-info">
+              <p class="candidate-name">${candidate.name || candidate.orcid}</p>
+              <p class="candidate-meta">
+                <a href="https://orcid.org/${candidate.orcid}" target="_blank" rel="noopener">${candidate.orcid}</a>
+              </p>
             </div>
-            <div class=\"candidate-actions\">
-              <button type=\"button\">Add ORCID</button>
+            <div class="candidate-actions">
+              <button type="button">Add ORCID</button>
             </div>
           `;
+
           card
             .querySelector("button")
             .addEventListener("click", () => {
@@ -630,6 +670,7 @@ LIMIT 200`;
         if (candidateCache.has(key)) {
           currentCandidates = candidateCache.get(key);
           renderCandidateList();
+          updateAuthorCandidateCount(key, currentCandidates.length);
           statusEl.textContent = `${currentCandidates.length} cached candidate(s) for ${item.label}.`;
           return;
         }
@@ -675,6 +716,7 @@ LIMIT 200`;
             dois: Array.from(entry.dois),
           }));
           candidateCache.set(key, candidates);
+          updateAuthorCandidateCount(key, candidates.length);
           currentCandidates = candidates;
           renderCandidateList();
           let status = candidates.length
@@ -781,6 +823,21 @@ LIMIT 200`;
             .join(" ");
           return haystack.includes(filterValue);
         });
+      }
+
+      function getAuthorCandidateCountText(qid) {
+        const count = candidateCounts.get(qid) ?? 0;
+        return `${count} candidate${count === 1 ? "" : "s"}`;
+      }
+
+      function updateAuthorCandidateCount(qid, count) {
+        candidateCounts.set(qid, count);
+        const row = authorRowMap.get(qid);
+        if (!row) return;
+        const countEl = row.querySelector(".author-count");
+        if (countEl) {
+          countEl.textContent = `${count} candidate${count === 1 ? "" : "s"}`;
+        }
       }
 
       function upsertQueue(entry) {
