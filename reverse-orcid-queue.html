@@ -391,7 +391,6 @@
           <textarea id="query" spellcheck="false"></textarea>
           <div class="controls-row">
             <button id="run-query">Run query</button>
-            <button id="find-all" type="button" disabled>Find ORCID for all visible</button>
           </div>
           <p class="status" id="status">Ready.</p>
         </div>
@@ -446,7 +445,6 @@
       const clearBtn = document.getElementById("clear-queue");
       const queueList = document.getElementById("queue-list");
       const runBtn = document.getElementById("run-query");
-      const findAllBtn = document.getElementById("find-all");
       const textarea = document.getElementById("query");
       const authorFilterInput = document.getElementById("author-filter");
       const authorListEl = document.getElementById("author-list");
@@ -511,21 +509,7 @@ LIMIT 200`;
         renderCandidateList();
       });
 
-      findAllBtn.addEventListener("click", async () => {
-        const filtered = applyRowFilter(latestResults);
-        if (!filtered.length) return;
-        findAllBtn.disabled = true;
-        statusEl.textContent = "Loading ORCID candidates for visible researchers...";
-        for (const item of filtered) {
-          try {
-            await loadCandidates(item);
-          } catch (error) {
-            console.warn("batch load error", item.qid, error);
-          }
-        }
-        findAllBtn.disabled = false;
-        statusEl.textContent = `Loaded ORCID candidates for ${filtered.length} researcher(s).`;
-      });
+
 
       async function fetchQuery(sparql) {
         const url = "https://qlever.dev/api/wikidata";
@@ -571,14 +555,12 @@ LIMIT 200`;
         authorListEl.innerHTML = "";
         if (!latestResults.length) {
           authorListEl.innerHTML = "<div class=\"empty-state\">Run the query to populate this list.</div>";
-          findAllBtn.disabled = true;
           statusEl.textContent = "No researchers found.";
           renderCandidateList();
           return;
         }
         if (!filtered.length) {
           authorListEl.innerHTML = "<div class=\"empty-state\">No researchers match that filter.</div>";
-          findAllBtn.disabled = true;
         } else {
           filtered.forEach((item) => {
             const row = document.createElement("div");
@@ -619,10 +601,10 @@ LIMIT 200`;
             authorRowMap.set(item.qid, row);
             applyAuthorQueuedClass(item.qid);
             updateAuthorVisibility(item.qid);
-            authorListEl.appendChild(row);
-          });
-          findAllBtn.disabled = false;
-        }
+          authorListEl.appendChild(row);
+        });
+      }
+
         if (filterValue) {
           statusEl.textContent = `Showing ${filtered.length}/${latestResults.length} researchers matching filter.`;
         } else {
