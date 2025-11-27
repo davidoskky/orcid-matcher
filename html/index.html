@@ -231,6 +231,18 @@
         border-radius: 3px;
         border: 1px solid #c7d2fe;
       }
+      .doi-meta a {
+        color: #1d4ed8;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .doi-meta a:hover {
+        text-decoration: underline;
+      }
+      .doi-count {
+        color: #475569;
+        font-size: 0.8rem;
+      }
       .candidate-header {
         display: flex;
         flex-direction: column;
@@ -604,11 +616,20 @@ LIMIT 200`;
             if (selectedAuthor && selectedAuthor.qid === item.qid) {
               row.classList.add("selected");
             }
-            const doiHtml = item.dois.length
-              ? `<div class="doi-meta">${item.dois
-                  .map((doi) => `<code>${doi}</code>`)
-                  .join(" ")}</div>`
-              : `<div class="doi-meta"><em>No DOI captured</em></div>`;
+            const doiArray = Array.isArray(item.dois) ? item.dois : [];
+            const primaryDoi = doiArray[0];
+            const extraCount = Math.max(0, doiArray.length - 1);
+            const doiLink = primaryDoi
+              ? `<a class="doi-link" href="https://doi.org/${encodeURIComponent(
+                  primaryDoi,
+                )}" target="_blank" rel="noopener">${primaryDoi}</a>`
+              : `<em>No DOI captured</em>`;
+            const moreLabel = extraCount
+              ? `<span class="doi-count">(+${extraCount} more)</span>`
+              : "";
+            const doiHtml = `<div class="doi-meta">${doiLink}${
+              moreLabel ? ` ${moreLabel}` : ""
+            }</div>`;
             const countText = getAuthorCandidateCountText(item.qid);
             row.innerHTML = `
               <span class="author-name">${item.label}</span>
@@ -741,15 +762,27 @@ LIMIT 200`;
         statusEl.textContent = `Gathering ORCID candidates for ${item.label}...`;
         const loadPromise = (async () => {
           const missingDois = [];
-          if (!item.dois?.length) {
-            try {
-              item.dois = await fetchPersonDois(item.qid);
-            } catch (error) {
-              console.warn("DOI lookup failed", error);
+          let dois = [];
+          try {
+            dois = await fetchPersonDois(item.qid);
+            item.dois = dois;
+          } catch (error) {
+            console.warn("DOI lookup failed", error);
+            if (item.dois?.length) {
+              dois = item.dois;
             }
           }
+          const normalizedDois = Array.from(
+            new Set(
+              (dois || [])
+                .map((value) =>
+                  typeof value === "string" ? value.toUpperCase() : value,
+                )
+                .filter(Boolean),
+            ),
+          );
           const map = new Map();
-          for (const doi of item.dois || []) {
+          for (const doi of normalizedDois) {
             if (!doi) continue;
             try {
               const data = await fetchCrossref(doi);
@@ -819,14 +852,14 @@ LIMIT 200`;
         });
       }
 
-      async function fetchPersonDois(qid) {
+      async function fetchPersonDois(qid, limit=50) {
         const sparql = `SELECT DISTINCT ?work ?doi ?date WHERE {
   ?work wdt:P50 wd:${qid} ;
         wdt:P356 ?doi .
   OPTIONAL { ?work wdt:P577 ?date }
 }
 ORDER BY DESC(?date)
-LIMIT 200`;
+LIMIT ${limit}`;
         const resp = await fetch(SCHOLARLY_ENDPOINT, {
           method: "POST",
           headers: {
