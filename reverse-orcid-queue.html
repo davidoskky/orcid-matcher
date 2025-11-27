@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -166,7 +166,9 @@
         display: flex;
         flex-direction: column;
         gap: 0.25rem;
-        transition: background 0.2s ease, border-color 0.2s ease;
+        transition:
+          background 0.2s ease,
+          border-color 0.2s ease;
         font-family: inherit;
       }
       .author-row:hover,
@@ -188,7 +190,7 @@
         font-size: 1rem;
         margin: 0;
       }
-      .author-row       .author-meta {
+      .author-row .author-meta {
         display: flex;
         flex-wrap: wrap;
         gap: 0.5rem;
@@ -384,19 +386,26 @@
         <div>
           <h1>ORCID Matcher</h1>
           <p>
-            Run a SPARQL query (via Qlever) to find authors with DOIs published after 2020 who still
-            lack an ORCID (P496). Enter ORCIDs for authors you are confident about and queue them
-            for a batch QuickStatements export.
+            Run a SPARQL query (via Qlever) to find authors with DOIs published
+            after 2011 who still lack an ORCID (P496). Enter ORCIDs for authors
+            you are confident about and queue them for a batch QuickStatements
+            export.
           </p>
           <p>
-            Important: ORCID Matcher does not verify whether an ORCID is already registered, and some
-            researchers may appear twice in Wikidata—once with an ORCID and once without. After adding
-            each ORCID, check the author’s Wikidata item so you don’t introduce a duplicate; the
+            Important: ORCID Matcher does not verify whether an ORCID is already
+            registered, and some researchers may appear twice in Wikidata—once
+            with an ORCID and once without. After adding each ORCID, check the
+            author’s Wikidata item so you don’t introduce a duplicate; the
             interface flags duplicates automatically.
           </p>
           <p class="small-link">
             Powered by Wikidata SPARQL + Crossref — generated in your browser. ·
-            <a href="https://github.com/davidoskky/orcid-matcher" target="_blank" rel="noopener">GitHub repo</a>
+            <a
+              href="https://github.com/davidoskky/orcid-matcher"
+              target="_blank"
+              rel="noopener"
+              >GitHub repo</a
+            >
           </p>
         </div>
         <div class="controls">
@@ -427,8 +436,12 @@
         <section class="panel candidates-panel">
           <div class="panel-header">
             <div class="candidate-header">
-              <h2 id="candidate-title" class="candidate-title">Select an author</h2>
-              <p id="candidate-subtitle" class="candidate-subtitle">No author chosen yet.</p>
+              <h2 id="candidate-title" class="candidate-title">
+                Select an author
+              </h2>
+              <p id="candidate-subtitle" class="candidate-subtitle">
+                No author chosen yet.
+              </p>
             </div>
             <input
               id="candidate-filter"
@@ -444,8 +457,12 @@
             <h3>Queue</h3>
             <div class="queue-list" id="queue-list"></div>
             <div class="queue-actions">
-              <button class="open-qs" id="open-qs" disabled>Open QuickStatements</button>
-              <button class="clear-queue" id="clear-queue" disabled>Clear queue</button>
+              <button class="open-qs" id="open-qs" disabled>
+                Open QuickStatements
+              </button>
+              <button class="clear-queue" id="clear-queue" disabled>
+                Clear queue
+              </button>
             </div>
           </div>
         </section>
@@ -486,7 +503,7 @@ SELECT DISTINCT ?person ?personLabel ?doi WHERE {
         wdt:P50  ?person ;
         wdt:P577 ?date .
 
-  FILTER(?date > "2020-12-31T23:59:59Z"^^xsd:dateTime)
+  FILTER(?date > "2011-12-31T23:59:59Z"^^xsd:dateTime)
   ?person wdt:P31 wd:Q5 .
   FILTER NOT EXISTS { ?person wdt:P496 [] }
 
@@ -505,7 +522,8 @@ LIMIT 200`;
           const data = await fetchQuery(textarea.value);
           renderResults(data);
         } catch (error) {
-          authorListEl.innerHTML = "<div class=\"empty-state\">Unable to fetch authors.</div>";
+          authorListEl.innerHTML =
+            '<div class="empty-state">Unable to fetch authors.</div>';
           statusEl.textContent = `Error: ${error.message}`;
         } finally {
           runBtn.disabled = false;
@@ -520,8 +538,6 @@ LIMIT 200`;
       candidateFilterInput.addEventListener("input", () => {
         renderCandidateList();
       });
-
-
 
       async function fetchQuery(sparql) {
         const url = "https://qlever.dev/api/wikidata";
@@ -559,20 +575,25 @@ LIMIT 200`;
         latestResults = Array.isArray(results) ? results : [];
         filterValue = authorFilterInput.value.trim().toLowerCase();
         const filtered = applyRowFilter(latestResults);
-        if (selectedAuthor && !latestResults.some((item) => item.qid === selectedAuthor.qid)) {
+        if (
+          selectedAuthor &&
+          !latestResults.some((item) => item.qid === selectedAuthor.qid)
+        ) {
           selectedAuthor = null;
           currentCandidates = [];
         }
         authorRowMap.clear();
         authorListEl.innerHTML = "";
         if (!latestResults.length) {
-          authorListEl.innerHTML = "<div class=\"empty-state\">Run the query to populate this list.</div>";
+          authorListEl.innerHTML =
+            '<div class="empty-state">Run the query to populate this list.</div>';
           statusEl.textContent = "No researchers found.";
           renderCandidateList();
           return;
         }
         if (!filtered.length) {
-          authorListEl.innerHTML = "<div class=\"empty-state\">No researchers match that filter.</div>";
+          authorListEl.innerHTML =
+            '<div class="empty-state">No researchers match that filter.</div>';
         } else {
           filtered.forEach((item) => {
             const row = document.createElement("div");
@@ -609,14 +630,16 @@ LIMIT 200`;
             });
             const qLink = row.querySelector(".author-qid");
             if (qLink) {
-              qLink.addEventListener("click", (event) => event.stopPropagation());
+              qLink.addEventListener("click", (event) =>
+                event.stopPropagation(),
+              );
             }
             authorRowMap.set(item.qid, row);
             applyAuthorQueuedClass(item.qid);
             updateAuthorVisibility(item.qid);
-          authorListEl.appendChild(row);
-        });
-      }
+            authorListEl.appendChild(row);
+          });
+        }
 
         if (filterValue) {
           statusEl.textContent = `Showing ${filtered.length}/${latestResults.length} researchers matching filter.`;
@@ -632,7 +655,8 @@ LIMIT 200`;
           candidateTitleEl.textContent = "Select an author";
           candidateSubtitleEl.textContent = "No author chosen yet.";
           candidateFilterInput.disabled = true;
-          candidateListEl.innerHTML = "<div class=\"empty-state\">Click an author to load ORCID candidates.</div>";
+          candidateListEl.innerHTML =
+            '<div class="empty-state">Click an author to load ORCID candidates.</div>';
           return;
         }
         candidateTitleEl.textContent = selectedAuthor.label;
@@ -643,17 +667,24 @@ LIMIT 200`;
         const matches = currentCandidates
           .map((candidate) => ({
             candidate,
-            similarity: calculateNameSimilarity(candidate.name || candidate.orcid, targetName),
+            similarity: calculateNameSimilarity(
+              candidate.name || candidate.orcid,
+              targetName,
+            ),
           }))
           .filter(({ candidate }) => {
-            const name = (candidate.name || candidate.orcid || "").toLowerCase();
+            const name = (
+              candidate.name ||
+              candidate.orcid ||
+              ""
+            ).toLowerCase();
             return name.includes(filterTerm);
           })
           .sort((a, b) => b.similarity - a.similarity);
         if (!matches.length) {
           candidateListEl.innerHTML = currentCandidates.length
-            ? "<div class=\"empty-state\">No candidates match that name filter.</div>"
-            : "<div class=\"empty-state\">No ORCID candidates loaded yet for this author.</div>";
+            ? '<div class="empty-state">No candidates match that name filter.</div>'
+            : '<div class="empty-state">No ORCID candidates loaded yet for this author.</div>';
           return;
         }
         candidateListEl.innerHTML = "";
@@ -672,12 +703,14 @@ LIMIT 200`;
             </div>
           `;
 
-          card
-            .querySelector("button")
-            .addEventListener("click", () => {
-              upsertQueue({ qid: selectedAuthor.qid, label: selectedAuthor.label, orcid: candidate.orcid });
-              statusEl.textContent = `Queued ${selectedAuthor.label} → ${candidate.orcid}`;
+          card.querySelector("button").addEventListener("click", () => {
+            upsertQueue({
+              qid: selectedAuthor.qid,
+              label: selectedAuthor.label,
+              orcid: candidate.orcid,
             });
+            statusEl.textContent = `Queued ${selectedAuthor.label} → ${candidate.orcid}`;
+          });
           candidateListEl.appendChild(card);
         });
       }
@@ -726,12 +759,11 @@ LIMIT 200`;
               for (const author of authors) {
                 const orcid = normalizeOrcid(author?.ORCID || author?.orcid);
                 if (!orcid) continue;
-                const entry =
-                  map.get(orcid) || {
-                    orcid,
-                    name: formatAuthorName(author),
-                    dois: new Set(),
-                  };
+                const entry = map.get(orcid) || {
+                  orcid,
+                  name: formatAuthorName(author),
+                  dois: new Set(),
+                };
                 entry.name = entry.name || formatAuthorName(author);
                 entry.dois.add(doi);
                 map.set(orcid, entry);
@@ -757,13 +789,20 @@ LIMIT 200`;
             status += ` Missing DOIs: ${missingDois.join(", ")}`;
           }
           statusEl.textContent = status;
-        })().catch((error) => {
-          setAuthorCandidateState(key, candidateCounts.get(key)?.count ?? 0, false, false);
-          statusEl.textContent = `Error: ${error.message}`;
-          throw error;
-        }).finally(() => {
-          candidateLoadPromises.delete(key);
-        });
+        })()
+          .catch((error) => {
+            setAuthorCandidateState(
+              key,
+              candidateCounts.get(key)?.count ?? 0,
+              false,
+              false,
+            );
+            statusEl.textContent = `Error: ${error.message}`;
+            throw error;
+          })
+          .finally(() => {
+            candidateLoadPromises.delete(key);
+          });
         candidateLoadPromises.set(key, loadPromise);
         return loadPromise;
       }
@@ -795,7 +834,8 @@ LIMIT 200`;
           },
           body: "query=" + encodeURIComponent(sparql),
         });
-        if (!resp.ok) throw new Error(`Scholarly query failed (${resp.status})`);
+        if (!resp.ok)
+          throw new Error(`Scholarly query failed (${resp.status})`);
         const data = await resp.json();
         const dois = new Set();
         (data?.results?.bindings || []).forEach((binding) => {
@@ -850,11 +890,7 @@ LIMIT 200`;
         if (!items.length) return [];
         if (!filterValue) return items;
         return items.filter((item) => {
-          const haystack = [
-            item.label,
-            item.qid,
-            ...(item.dois || []),
-          ]
+          const haystack = [item.label, item.qid, ...(item.dois || [])]
             .filter(Boolean)
             .map((value) => value.toString().toLowerCase())
             .join(" ");
@@ -863,7 +899,11 @@ LIMIT 200`;
       }
 
       function normalizeNameForComparison(value) {
-        return (value || "").toString().toLowerCase().replace(/\s+/g, " ").trim();
+        return (value || "")
+          .toString()
+          .toLowerCase()
+          .replace(/\s+/g, " ")
+          .trim();
       }
 
       function levenshteinDistance(a, b) {
@@ -879,7 +919,11 @@ LIMIT 200`;
         for (let i = 1; i < rows; i += 1) {
           for (let j = 1; j < cols; j += 1) {
             const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-            dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+            dp[i][j] = Math.min(
+              dp[i - 1][j] + 1,
+              dp[i][j - 1] + 1,
+              dp[i - 1][j - 1] + cost,
+            );
           }
         }
         return dp[a.length][b.length];
@@ -890,7 +934,10 @@ LIMIT 200`;
         const normalizedTarget = normalizeNameForComparison(target);
         if (!normalizedName || !normalizedTarget) return 0;
         const distance = levenshteinDistance(normalizedName, normalizedTarget);
-        const maxLength = Math.max(normalizedName.length, normalizedTarget.length);
+        const maxLength = Math.max(
+          normalizedName.length,
+          normalizedTarget.length,
+        );
         return maxLength ? 1 - distance / maxLength : 0;
       }
 
@@ -914,7 +961,12 @@ LIMIT 200`;
         }
       }
 
-      function setAuthorCandidateState(qid, count, loading = false, loaded = false) {
+      function setAuthorCandidateState(
+        qid,
+        count,
+        loading = false,
+        loaded = false,
+      ) {
         candidateCounts.set(qid, { count, loading, loaded });
         refreshAuthorCount(qid);
         updateAuthorVisibility(qid);
@@ -937,7 +989,8 @@ LIMIT 200`;
         const row = authorRowMap.get(qid);
         if (!row) return;
         const entry = candidateCounts.get(qid);
-        const shouldHide = entry && !entry.loading && entry.loaded && entry.count === 0;
+        const shouldHide =
+          entry && !entry.loading && entry.loaded && entry.count === 0;
         row.hidden = shouldHide;
         row.style.display = shouldHide ? "none" : "flex";
       }
@@ -972,7 +1025,8 @@ LIMIT 200`;
       function renderQueue() {
         queueList.innerHTML = "";
         if (!QUEUE.length) {
-          queueList.innerHTML = "<p>Add a researcher above to build your queue.</p>";
+          queueList.innerHTML =
+            "<p>Add a researcher above to build your queue.</p>";
           openBtn.disabled = true;
           clearBtn.disabled = true;
           return;
@@ -1004,11 +1058,9 @@ LIMIT 200`;
 
       openBtn.addEventListener("click", () => {
         if (!QUEUE.length) return;
-        const lines = QUEUE.map((item) => [
-          item.qid,
-          "P496",
-          `"${item.orcid}"`,
-        ].join("\t"));
+        const lines = QUEUE.map((item) =>
+          [item.qid, "P496", `"${item.orcid}"`].join("\t"),
+        );
         openQuickStatements(lines);
       });
 
@@ -1019,7 +1071,8 @@ LIMIT 200`;
           .replace(/\r\n?/g, "\n")
           .replace(/\t/g, "|")
           .replace(/\n/g, "||");
-        const url = "https://qs-dev.toolforge.org/batch/new?v1=" +
+        const url =
+          "https://qs-dev.toolforge.org/batch/new?v1=" +
           encodeURIComponent(v1urlText);
         window.open(url, "_blank", "noopener");
       }
