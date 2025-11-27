@@ -820,11 +820,12 @@ LIMIT 200`;
       }
 
       async function fetchPersonDois(qid) {
-        const sparql = `SELECT DISTINCT ?work ?doi WHERE {
+        const sparql = `SELECT DISTINCT ?work ?doi ?date WHERE {
   ?work wdt:P50 wd:${qid} ;
         wdt:P356 ?doi .
+  OPTIONAL { ?work wdt:P577 ?date }
 }
-ORDER BY ?work
+ORDER BY DESC(?date)
 LIMIT 200`;
         const resp = await fetch(SCHOLARLY_ENDPOINT, {
           method: "POST",
