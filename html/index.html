@@ -672,20 +672,52 @@ LIMIT 200`;
       }
 
       function renderCandidateList() {
-        if (!selectedAuthor) {
-          candidateTitleEl.textContent = "Select an author";
-          candidateSubtitleEl.textContent = "No author chosen yet.";
-          candidateFilterInput.disabled = true;
-          candidateListEl.innerHTML =
-            '<div class="empty-state">Click an author to load ORCID candidates.</div>';
-          return;
-        }
+        if (!selectedAuthor) return renderEmptyAuthorState();
+
+        const targetName = selectedAuthor.label || "";
+        const filterTerm = candidateFilterInput.value.trim().toLowerCase();
+
         candidateTitleEl.textContent = selectedAuthor.label;
         candidateSubtitleEl.textContent = `${selectedAuthor.qid} · sorted by name similarity`;
         candidateFilterInput.disabled = false;
-        const targetName = selectedAuthor?.label || "";
-        const filterTerm = candidateFilterInput.value.trim().toLowerCase();
-        const matches = currentCandidates
+
+        const matches = getFilteredAndSortedCandidates({
+          candidates: currentCandidates,
+          targetName,
+          filterTerm,
+        });
+
+        if (!matches.length) return renderEmptyMatchesState();
+
+        renderCandidateCards(matches);
+      }
+
+      /* ---------------------------
+   Helpers
+---------------------------- */
+
+      function renderEmptyAuthorState() {
+        candidateTitleEl.textContent = "Select an author";
+        candidateSubtitleEl.textContent = "No author chosen yet.";
+        candidateFilterInput.disabled = true;
+        candidateListEl.innerHTML =
+          '<div class="empty-state">Click an author to load ORCID candidates.</div>';
+      }
+
+      function renderEmptyMatchesState() {
+        const message = currentCandidates.length
+          ? "No candidates match that name filter."
+          : "No ORCID candidates loaded yet for this author.";
+
+        candidateListEl.innerHTML = `<div class="empty-state">${message}</div>`;
+      }
+
+      function getFilteredAndSortedCandidates({
+        candidates,
+        targetName,
+        filterTerm,
+      }) {
+        return candidates
           .map((candidate) => ({
             candidate,
             similarity: calculateNameSimilarity(
@@ -702,38 +734,46 @@ LIMIT 200`;
             return name.includes(filterTerm);
           })
           .sort((a, b) => b.similarity - a.similarity);
-        if (!matches.length) {
-          candidateListEl.innerHTML = currentCandidates.length
-            ? '<div class="empty-state">No candidates match that name filter.</div>'
-            : '<div class="empty-state">No ORCID candidates loaded yet for this author.</div>';
-          return;
-        }
-        candidateListEl.innerHTML = "";
-        matches.forEach(({ candidate }) => {
-          const card = document.createElement("article");
-          card.className = "candidate-card";
-          card.innerHTML = `
-            <div class="candidate-info">
-              <p class="candidate-name">${candidate.name || candidate.orcid}</p>
-              <p class="candidate-meta">
-                <a href="https://orcid.org/${candidate.orcid}" target="_blank" rel="noopener">${candidate.orcid}</a>
-              </p>
-            </div>
-            <div class="candidate-actions">
-              <button type="button">Add ORCID</button>
-            </div>
-          `;
+      }
 
-          card.querySelector("button").addEventListener("click", () => {
-            upsertQueue({
-              qid: selectedAuthor.qid,
-              label: selectedAuthor.label,
-              orcid: candidate.orcid,
-            });
-            statusEl.textContent = `Queued ${selectedAuthor.label} → ${candidate.orcid}`;
-          });
+      function renderCandidateCards(matches) {
+        candidateListEl.innerHTML = "";
+
+        for (const { candidate } of matches) {
+          const card = createCandidateCard(candidate);
           candidateListEl.appendChild(card);
+        }
+      }
+
+      function createCandidateCard(candidate) {
+        const card = document.createElement("article");
+        card.className = "candidate-card";
+
+        const name = candidate.name || candidate.orcid;
+        const orcid = candidate.orcid;
+
+        card.innerHTML = `
+    <div class="candidate-info">
+      <p class="candidate-name">${name}</p>
+      <p class="candidate-meta">
+        <a href="https://orcid.org/${orcid}" target="_blank" rel="noopener">${orcid}</a>
+      </p>
+    </div>
+    <div class="candidate-actions">
+      <button type="button">Add ORCID</button>
+    </div>
+  `;
+
+        card.querySelector("button").addEventListener("click", () => {
+          upsertQueue({
+            qid: selectedAuthor.qid,
+            label: selectedAuthor.label,
+            orcid,
+          });
+          statusEl.textContent = `Queued ${selectedAuthor.label} → ${orcid}`;
         });
+
+        return card;
       }
 
       function handleAuthorSelect(author) {
@@ -852,7 +892,7 @@ LIMIT 200`;
         });
       }
 
-      async function fetchPersonDois(qid, limit=50) {
+      async function fetchPersonDois(qid, limit = 50) {
         const sparql = `SELECT DISTINCT ?work ?doi ?date WHERE {
   ?work wdt:P50 wd:${qid} ;
         wdt:P356 ?doi .
