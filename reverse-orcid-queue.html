@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Reverse ORCID queue</title>
+    <title>ORCID Matcher</title>
     <style>
       :root {
         font-family: "Segoe UI", "Roboto", system-ui, sans-serif;
@@ -382,14 +382,21 @@
     <div class="app">
       <header class="hero">
         <div>
-          <h1>Queue ORCID additions</h1>
+          <h1>ORCID Matcher</h1>
           <p>
             Run a SPARQL query (via Qlever) to find authors with DOIs published after 2020 who still
-            lack an ORCID (P496). Enter ORCIDs for the people you are confident about and queue them
+            lack an ORCID (P496). Enter ORCIDs for authors you are confident about and queue them
             for a batch QuickStatements export.
           </p>
+          <p>
+            Important: ORCID Matcher does not verify whether an ORCID is already registered, and some
+            researchers may appear twice in Wikidata—once with an ORCID and once without. After adding
+            each ORCID, check the author’s Wikidata item so you don’t introduce a duplicate; the
+            interface flags duplicates automatically.
+          </p>
           <p class="small-link">
-            Powered by Wikidata SPARQL + Crossref — generated in your browser.
+            Powered by Wikidata SPARQL + Crossref — generated in your browser. ·
+            <a href="https://github.com/davidoskky/orcid-matcher" target="_blank" rel="noopener">GitHub repo</a>
           </p>
         </div>
         <div class="controls">
