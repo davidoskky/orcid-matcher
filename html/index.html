@@ -495,16 +495,19 @@
       const candidateTitleEl = document.getElementById("candidate-title");
       const candidateSubtitleEl = document.getElementById("candidate-subtitle");
 
-      const QUEUE = [];
-      const candidateCache = new Map();
-      const authorRowMap = new Map();
-      const candidateCounts = new Map();
-      const candidateLoadPromises = new Map();
-      const queuedAuthors = new Set();
-      let latestResults = [];
-      let selectedAuthor = null;
-      let currentCandidates = [];
-      let filterValue = "";
+const QUEUE = [];
+const candidateCache = new Map();
+const authorRowMap = new Map();
+const candidateCounts = new Map();
+const candidateLoadPromises = new Map();
+const queuedAuthors = new Set();
+let latestResults = [];
+let selectedAuthor = null;
+let currentCandidates = [];
+let filterValue = "";
+const completionOrder = new Map();
+let nextCompletionIndex = 0;
+
 
       const DEFAULT_QUERY = `PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 PREFIX wd: <http://www.wikidata.org/entity/>
@@ -587,7 +590,8 @@ LIMIT 200`;
       function renderResults(results) {
         latestResults = Array.isArray(results) ? results : [];
         filterValue = authorFilterInput.value.trim().toLowerCase();
-        const filtered = applyRowFilter(latestResults);
+        const orderedResults = orderAuthors(latestResults);
+        const filtered = applyRowFilter(orderedResults);
         if (
           selectedAuthor &&
           !latestResults.some((item) => item.qid === selectedAuthor.qid)
@@ -713,6 +717,25 @@ LIMIT 200`;
         candidateListEl.innerHTML = `<div class="empty-state">${message}</div>`;
       }
 
+      function orderAuthors(items) {
+        const indexedOrder = new Map();
+        items.forEach((item, index) => {
+          indexedOrder.set(item.qid, index);
+        });
+        return [...items].sort((a, b) => {
+          const aOrder = completionOrder.get(a.qid);
+          const bOrder = completionOrder.get(b.qid);
+          if (aOrder != null && bOrder != null) {
+            return aOrder - bOrder;
+          }
+          if (aOrder != null) return -1;
+          if (bOrder != null) return 1;
+          const aIndex = indexedOrder.get(a.qid) ?? 0;
+          const bIndex = indexedOrder.get(b.qid) ?? 0;
+          return aIndex - bIndex;
+        });
+      }
+
       function getFilteredAndSortedCandidates({
         candidates,
         targetName,
@@ -813,6 +836,10 @@ LIMIT 200`;
             dois: Array.from(entry.dois),
           }));
           candidateCache.set(key, candidates);
+          if (!completionOrder.has(key)) {
+            completionOrder.set(key, nextCompletionIndex);
+            nextCompletionIndex += 1;
+          }
           setAuthorCandidateState(key, candidates.length, false, true);
           if (selectedAuthor?.qid === key) {
             currentCandidates = candidates;
