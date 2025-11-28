@@ -854,15 +854,17 @@ LIMIT 200`;
           }));
           candidateCache.set(key, candidates);
           setAuthorCandidateState(key, candidates.length, false, true);
-          currentCandidates = candidates;
-          renderCandidateList();
-          let status = candidates.length
-            ? `${candidates.length} ORCID candidate(s) available.`
-            : "No ORCID candidates found.";
-          if (missingDois.length) {
-            status += ` Missing DOIs: ${missingDois.join(", ")}`;
+          if (selectedAuthor?.qid === key) {
+            currentCandidates = candidates;
+            renderCandidateList();
+            let status = candidates.length
+              ? `${candidates.length} ORCID candidate(s) available.`
+              : "No ORCID candidates found.";
+            if (missingDois.length) {
+              status += ` Missing DOIs: ${missingDois.join(", ")}`;
+            }
+            statusEl.textContent = status;
           }
-          statusEl.textContent = status;
         })()
           .catch((error) => {
             setAuthorCandidateState(
