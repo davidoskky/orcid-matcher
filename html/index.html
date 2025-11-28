@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="connect-src 'self' 'unsafe-eval' 'unsafe-inline' blob: data: filesystem: mediastream: https://*.toolforge.org https://wikibooks.org https://*.wikibooks.org https://wikidata.org https://*.wikidata.org https://wikimedia.org https://*.wikimedia.org https://wikinews.org https://*.wikinews.org https://wikipedia.org https://*.wikipedia.org https://wikiquote.org https://*.wikiquote.org https://wikisource.org https://*.wikisource.org https://wikiversity.org https://*.wikiversity.org https://wikivoyage.org https://*.wikivoyage.org https://wiktionary.org https://*.wiktionary.org https://*.wmcloud.org https://*.wmflabs.org https://wikimediafoundation.org https://mediawiki.org https://*.mediawiki.org wss://orcid-matcher.toolforge.org https://api.crossref.org https://qlever.dev https://query-scholarly.wikidata.org" />
     <title>ORCID Matcher</title>
     <style>
       :root {
@@ -882,14 +883,130 @@ LIMIT 200`;
 
       const CROSSREF_BASE = "https://api.crossref.org/works/";
       const CROSSREF_HEADERS = { Accept: "application/json" };
+      const CROSSREF_RATE_PER_SECOND = 45;
+      const CROSSREF_CONCURRENCY = 5;
+      const CROSSREF_MAX_RETRIES = 3;
+      const CROSSREF_RETRY_BACKOFF_MS = 800;
       const SCHOLARLY_ENDPOINT = "https://query-scholarly.wikidata.org/sparql";
+      const SCHOLARLY_RATE_PER_SECOND = 10;
+      const SCHOLARLY_CONCURRENCY = 2;
+      const SCHOLARLY_MAX_RETRIES = 4;
+      const SCHOLARLY_RETRY_BACKOFF_MS = 1200;
 
-      function fetchCrossref(doi) {
-        const url = CROSSREF_BASE + encodeURIComponent(doi);
-        return fetch(url, { headers: CROSSREF_HEADERS }).then((resp) => {
-          if (!resp.ok) throw new Error(`Crossref error (${resp.status})`);
-          return resp.json();
+      function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      function createRateLimitedQueue({ ratePerSecond, concurrency }) {
+        const queue = [];
+        let running = 0;
+        let nextAvailable = 0;
+        let timerId = null;
+
+        function schedule(task) {
+          return new Promise((resolve, reject) => {
+            queue.push({ task, resolve, reject });
+            processQueue();
+          });
+        }
+
+        function processQueue() {
+          if (!queue.length || running >= concurrency) return;
+          const now = Date.now();
+          if (now < nextAvailable) {
+            if (!timerId) {
+              timerId = setTimeout(() => {
+                timerId = null;
+                processQueue();
+              }, nextAvailable - now);
+            }
+            return;
+          }
+
+          const job = queue.shift();
+          running += 1;
+          nextAvailable = now + Math.round(1000 / ratePerSecond);
+
+          Promise.resolve()
+            .then(() => job.task())
+            .then(
+              (value) => job.resolve(value),
+              (error) => job.reject(error),
+            )
+            .finally(() => {
+              running -= 1;
+              timerId = null;
+              processQueue();
+            });
+        }
+
+        return schedule;
+      }
+
+      const scholarlyQueue = createRateLimitedQueue({
+        ratePerSecond: SCHOLARLY_RATE_PER_SECOND,
+        concurrency: SCHOLARLY_CONCURRENCY,
+      });
+
+      const crossrefQueue = createRateLimitedQueue({
+        ratePerSecond: CROSSREF_RATE_PER_SECOND,
+        concurrency: CROSSREF_CONCURRENCY,
+      });
+
+      async function performScholarlyFetch(sparql) {
+        const resp = await fetch(SCHOLARLY_ENDPOINT, {
+          method: "POST",
+          headers: {
+            Accept: "application/sparql-results+json",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: "query=" + encodeURIComponent(sparql),
         });
+        if (!resp.ok) {
+          const error = new Error(`Scholarly query failed (${resp.status})`);
+          error.status = resp.status;
+          throw error;
+        }
+        return resp.json();
+      }
+
+      async function runScholarlyQuery(sparql, retries = 0) {
+        try {
+          return await scholarlyQueue(() => performScholarlyFetch(sparql));
+        } catch (error) {
+          if (error.status === 429 && retries < SCHOLARLY_MAX_RETRIES) {
+            const backoff = SCHOLARLY_RETRY_BACKOFF_MS * (retries + 1);
+            statusEl.textContent = `Rate limited by Scholarly; retrying in ${Math.round(backoff / 1000)}s`;
+            await sleep(backoff);
+            return runScholarlyQuery(sparql, retries + 1);
+          }
+          throw error;
+        }
+      }
+
+      async function performCrossrefFetch(doi) {
+        const url = CROSSREF_BASE + encodeURIComponent(doi);
+        const resp = await fetch(url, { headers: CROSSREF_HEADERS });
+        if (!resp.ok) {
+          const error = new Error(`Crossref error (${resp.status})`);
+          error.status = resp.status;
+          throw error;
+        }
+        return resp.json();
+      }
+
+      async function fetchCrossref(doi, retries = 0) {
+        try {
+          return await crossrefQueue(() => performCrossrefFetch(doi));
+        } catch (error) {
+          if (error.status === 429 && retries < CROSSREF_MAX_RETRIES) {
+            const backoff = CROSSREF_RETRY_BACKOFF_MS * (retries + 1);
+            statusEl.textContent = `Crossref rate limited; retrying in ${Math.round(backoff / 1000)}s`;
+            await sleep(backoff);
+            return fetchCrossref(doi, retries + 1);
+          }
+          throw error;
+        }
       }
 
       async function fetchPersonDois(qid, limit = 50) {
@@ -900,17 +1017,7 @@ LIMIT 200`;
 }
 ORDER BY DESC(?date)
 LIMIT ${limit}`;
-        const resp = await fetch(SCHOLARLY_ENDPOINT, {
-          method: "POST",
-          headers: {
-            Accept: "application/sparql-results+json",
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: "query=" + encodeURIComponent(sparql),
-        });
-        if (!resp.ok)
-          throw new Error(`Scholarly query failed (${resp.status})`);
-        const data = await resp.json();
+        const data = await runScholarlyQuery(sparql);
         const dois = new Set();
         (data?.results?.bindings || []).forEach((binding) => {
           const value = binding?.doi?.value;
