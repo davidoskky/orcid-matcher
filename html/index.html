@@ -802,51 +802,11 @@ LIMIT 200`;
         markAuthorLoading(key);
         statusEl.textContent = `Gathering ORCID candidates for ${item.label}...`;
         const loadPromise = (async () => {
-          const missingDois = [];
-          let dois = [];
-          try {
-            dois = await fetchPersonDois(item.qid);
-            item.dois = dois;
-          } catch (error) {
-            console.warn("DOI lookup failed", error);
-            if (item.dois?.length) {
-              dois = item.dois;
-            }
-          }
-          const normalizedDois = Array.from(
-            new Set(
-              (dois || [])
-                .map((value) =>
-                  typeof value === "string" ? value.toUpperCase() : value,
-                )
-                .filter(Boolean),
-            ),
+          const dois = await gatherAuthorDois(item);
+          const normalizedDois = normalizeDois(dois);
+          const { map, missingDois } = await fetchCrossrefCandidates(
+            normalizedDois,
           );
-          const map = new Map();
-          for (const doi of normalizedDois) {
-            if (!doi) continue;
-            try {
-              const data = await fetchCrossref(doi);
-              const authors = Array.isArray(data?.message?.author)
-                ? data.message.author
-                : [];
-              for (const author of authors) {
-                const orcid = normalizeOrcid(author?.ORCID || author?.orcid);
-                if (!orcid) continue;
-                const entry = map.get(orcid) || {
-                  orcid,
-                  name: formatAuthorName(author),
-                  dois: new Set(),
-                };
-                entry.name = entry.name || formatAuthorName(author);
-                entry.dois.add(doi);
-                map.set(orcid, entry);
-              }
-            } catch (error) {
-              console.warn("Crossref lookup failed", doi, error);
-              missingDois.push(doi);
-            }
-          }
           const candidates = Array.from(map.values()).map((entry) => ({
             orcid: entry.orcid,
             name: entry.name,
@@ -881,6 +841,62 @@ LIMIT 200`;
           });
         candidateLoadPromises.set(key, loadPromise);
         return loadPromise;
+      }
+
+      async function gatherAuthorDois(item) {
+        try {
+          const dois = await fetchPersonDois(item.qid);
+          item.dois = dois;
+          return dois;
+        } catch (error) {
+          console.warn("DOI lookup failed", error);
+          return item.dois?.length ? item.dois : [];
+        }
+      }
+
+      function normalizeDois(values) {
+        if (!values?.length) return [];
+        return Array.from(
+          new Set(
+            values
+              .map((value) =>
+                typeof value === "string" ? value.toUpperCase() : value,
+              )
+              .filter(Boolean),
+          ),
+        );
+      }
+
+      async function fetchCrossrefCandidates(dois) {
+        const map = new Map();
+        const missingDois = [];
+        await Promise.all(
+          dois.map(async (doi) => {
+            if (!doi) return;
+            try {
+              const data = await fetchCrossref(doi);
+              const authors = Array.isArray(data?.message?.author)
+                ? data.message.author
+                : [];
+              for (const author of authors) {
+                const orcid = normalizeOrcid(author?.ORCID || author?.orcid);
+                if (!orcid) continue;
+                const entry = map.get(orcid) || {
+                  orcid,
+                  name: formatAuthorName(author),
+                  dois: new Set(),
+                };
+                entry.name = entry.name || formatAuthorName(author);
+                entry.dois.add(doi);
+                map.set(orcid, entry);
+              }
+            } catch (error) {
+              console.warn("Crossref lookup failed", doi, error);
+              missingDois.push(doi);
+            }
+          }),
+        );
+        return { map, missingDois };
       }
 
       const CROSSREF_BASE = "https://api.crossref.org/works/";
