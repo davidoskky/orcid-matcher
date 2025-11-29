@@ -306,6 +306,15 @@
         display: inline-block;
         white-space: nowrap;
       }
+      .candidate-sample-doi {
+        font-size: 0.8rem;
+        color: #475569;
+        margin: 0.3rem 0 0;
+      }
+      .candidate-sample-doi a {
+        color: #2563eb;
+        text-decoration: none;
+      }
       .candidate-actions button {
         padding: 0.55rem 0.95rem;
         border-radius: 10px;
@@ -789,6 +798,10 @@ LIMIT 200`;
         const matchCount = candidate.dois?.length ?? 0;
         const matchLabel =
           matchCount === 1 ? "1 paper" : `${matchCount} papers`;
+        const sampleDoi = candidate.dois?.[0];
+        const sampleDoiLink = sampleDoi
+          ? `https://doi.org/${encodeURIComponent(sampleDoi)}`
+          : "";
 
         card.innerHTML = `
           <div class="candidate-info">
@@ -796,6 +809,13 @@ LIMIT 200`;
             <p class="candidate-meta">
               <a href="https://orcid.org/${orcid}" target="_blank" rel="noopener">${orcid}</a>
               <span class="candidate-match-count" aria-label="Appears in ${matchLabel}">Appears in ${matchLabel}</span>
+            ${
+              sampleDoi
+                ? `<span class="candidate-sample-doi">
+              <a href="${sampleDoiLink}" target="_blank" rel="noopener">${sampleDoi}</a>
+            </span>`
+                : ""
+            }
             </p>
           </div>
           <div class="candidate-actions">
