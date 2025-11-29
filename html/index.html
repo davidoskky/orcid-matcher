@@ -299,6 +299,22 @@
         color: #2563eb;
         text-decoration: none;
       }
+      .candidate-match-count {
+        font-size: 0.8rem;
+        color: #475569;
+        margin: 0 0 0 0.75rem;
+        display: inline-block;
+        white-space: nowrap;
+      }
+      .candidate-sample-doi {
+        font-size: 0.8rem;
+        color: #475569;
+        margin: 0.3rem 0 0;
+      }
+      .candidate-sample-doi a {
+        color: #2563eb;
+        text-decoration: none;
+      }
       .candidate-actions button {
         padding: 0.55rem 0.95rem;
         border-radius: 10px;
@@ -625,20 +641,7 @@ LIMIT 200`;
             if (selectedAuthor && selectedAuthor.qid === item.qid) {
               row.classList.add("selected");
             }
-            const doiArray = Array.isArray(item.dois) ? item.dois : [];
-            const primaryDoi = doiArray[0];
-            const extraCount = Math.max(0, doiArray.length - 1);
-            const doiLink = primaryDoi
-              ? `<a class="doi-link" href="https://doi.org/${encodeURIComponent(
-                  primaryDoi,
-                )}" target="_blank" rel="noopener">${primaryDoi}</a>`
-              : `<em>No DOI captured</em>`;
-            const moreLabel = extraCount
-              ? `<span class="doi-count">(+${extraCount} more)</span>`
-              : "";
-            const doiHtml = `<div class="doi-meta">${doiLink}${
-              moreLabel ? ` ${moreLabel}` : ""
-            }</div>`;
+            const doiHtml = buildAuthorDoiMeta(item);
             const countText = getAuthorCandidateCountText(item.qid);
             row.innerHTML = `
               <span class="author-name">${item.label}</span>
@@ -667,6 +670,18 @@ LIMIT 200`;
             authorRowMap.set(item.qid, row);
             applyAuthorQueuedClass(item.qid);
             updateAuthorVisibility(item.qid);
+            const existingCountState = candidateCounts.get(item.qid);
+            if (
+              !existingCountState ||
+              (!existingCountState.loading && !existingCountState.loaded)
+            ) {
+              setAuthorCandidateState(
+                item.qid,
+                existingCountState?.count ?? 0,
+                true,
+                false,
+              );
+            }
             authorListEl.appendChild(row);
           });
         }
@@ -704,6 +719,35 @@ LIMIT 200`;
       /* ---------------------------
    Helpers
 ---------------------------- */
+
+      function buildAuthorDoiMeta(item) {
+        const doiArray = Array.isArray(item.dois) ? item.dois : [];
+        const primaryDoi = doiArray[0];
+        const extraCount = Math.max(0, doiArray.length - 1);
+        const doiLink = primaryDoi
+          ? `<a class="doi-link" href="https://doi.org/${encodeURIComponent(
+              primaryDoi,
+            )}" target="_blank" rel="noopener">${primaryDoi}</a>`
+          : `<em>No DOI captured</em>`;
+        const moreLabel = extraCount
+          ? `<span class="doi-count">(+${extraCount} more)</span>`
+          : "";
+        return `<div class="doi-meta">${doiLink}${
+          moreLabel ? ` ${moreLabel}` : ""
+        }</div>`;
+      }
+
+      function refreshAuthorDoiMeta(qid, item) {
+        const row = authorRowMap.get(qid);
+        if (!row) return;
+        const newHtml = buildAuthorDoiMeta(item);
+        const existing = row.querySelector(".doi-meta");
+        if (existing) {
+          existing.outerHTML = newHtml;
+          return;
+        }
+        row.insertAdjacentHTML("beforeend", newHtml);
+      }
 
       function renderEmptyAuthorState() {
         candidateTitleEl.textContent = "Select an author";
@@ -779,18 +823,33 @@ LIMIT 200`;
 
         const name = candidate.name || candidate.orcid;
         const orcid = candidate.orcid;
+        const matchCount = candidate.dois?.length ?? 0;
+        const matchLabel =
+          matchCount === 1 ? "1 paper" : `${matchCount} papers`;
+        const sampleDoi = candidate.dois?.[0];
+        const sampleDoiLink = sampleDoi
+          ? `https://doi.org/${encodeURIComponent(sampleDoi)}`
+          : "";
 
         card.innerHTML = `
-    <div class="candidate-info">
-      <p class="candidate-name">${name}</p>
-      <p class="candidate-meta">
-        <a href="https://orcid.org/${orcid}" target="_blank" rel="noopener">${orcid}</a>
-      </p>
-    </div>
-    <div class="candidate-actions">
-      <button type="button">Add ORCID</button>
-    </div>
-  `;
+          <div class="candidate-info">
+            <p class="candidate-name">${name}</p>
+            <p class="candidate-meta">
+              <a href="https://orcid.org/${orcid}" target="_blank" rel="noopener">${orcid}</a>
+              <span class="candidate-match-count" aria-label="Appears in ${matchLabel}">Appears in ${matchLabel}</span>
+            ${
+              sampleDoi
+                ? `<span class="candidate-sample-doi">
+              <a href="${sampleDoiLink}" target="_blank" rel="noopener">${sampleDoi}</a>
+            </span>`
+                : ""
+            }
+            </p>
+          </div>
+          <div class="candidate-actions">
+            <button type="button">Add ORCID</button>
+          </div>
+        `;
 
         card.querySelector("button").addEventListener("click", () => {
           upsertQueue({
@@ -834,6 +893,8 @@ LIMIT 200`;
         const loadPromise = (async () => {
           const dois = await gatherAuthorDois(item);
           const normalizedDois = normalizeDois(dois);
+          item.dois = normalizedDois;
+          refreshAuthorDoiMeta(key, item);
           const { map, missingDois } =
             await fetchCrossrefCandidates(normalizedDois);
           const candidates = Array.from(map.values()).map((entry) => ({
