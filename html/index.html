@@ -299,6 +299,13 @@
         color: #2563eb;
         text-decoration: none;
       }
+      .candidate-match-count {
+        font-size: 0.8rem;
+        color: #475569;
+        margin: 0 0 0 0.75rem;
+        display: inline-block;
+        white-space: nowrap;
+      }
       .candidate-actions button {
         padding: 0.55rem 0.95rem;
         border-radius: 10px;
@@ -779,18 +786,22 @@ LIMIT 200`;
 
         const name = candidate.name || candidate.orcid;
         const orcid = candidate.orcid;
+        const matchCount = candidate.dois?.length ?? 0;
+        const matchLabel =
+          matchCount === 1 ? "1 paper" : `${matchCount} papers`;
 
         card.innerHTML = `
-    <div class="candidate-info">
-      <p class="candidate-name">${name}</p>
-      <p class="candidate-meta">
-        <a href="https://orcid.org/${orcid}" target="_blank" rel="noopener">${orcid}</a>
-      </p>
-    </div>
-    <div class="candidate-actions">
-      <button type="button">Add ORCID</button>
-    </div>
-  `;
+          <div class="candidate-info">
+            <p class="candidate-name">${name}</p>
+            <p class="candidate-meta">
+              <a href="https://orcid.org/${orcid}" target="_blank" rel="noopener">${orcid}</a>
+              <span class="candidate-match-count" aria-label="Appears in ${matchLabel}">Appears in ${matchLabel}</span>
+            </p>
+          </div>
+          <div class="candidate-actions">
+            <button type="button">Add ORCID</button>
+          </div>
+        `;
 
         card.querySelector("button").addEventListener("click", () => {
           upsertQueue({
