@@ -1284,8 +1284,13 @@ LIMIT ${limit}`;
 
       openBtn.addEventListener("click", () => {
         if (!QUEUE.length) return;
-        const lines = QUEUE.map((item) =>
-          [item.qid, "P496", `"${item.orcid}"`].join("\t"),
+        const editComment =
+          "/* Added ORCID id via [[Wikidata:Tools/ORCID Matcher]] */";
+        const lines = QUEUE.map(
+          (item) =>
+            [item.qid, "P496", `"${item.orcid}"`].join("\t") +
+            " " +
+            editComment,
         );
         openQuickStatements(lines);
       });
