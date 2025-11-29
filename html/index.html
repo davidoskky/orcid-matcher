@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta http-equiv="Content-Security-Policy" content="connect-src 'self' 'unsafe-eval' 'unsafe-inline' blob: data: filesystem: mediastream: https://*.toolforge.org https://wikibooks.org https://*.wikibooks.org https://wikidata.org https://*.wikidata.org https://wikimedia.org https://*.wikimedia.org https://wikinews.org https://*.wikinews.org https://wikipedia.org https://*.wikipedia.org https://wikiquote.org https://*.wikiquote.org https://wikisource.org https://*.wikisource.org https://wikiversity.org https://*.wikiversity.org https://wikivoyage.org https://*.wikivoyage.org https://wiktionary.org https://*.wiktionary.org https://*.wmcloud.org https://*.wmflabs.org https://wikimediafoundation.org https://mediawiki.org https://*.mediawiki.org wss://orcid-matcher.toolforge.org https://api.crossref.org https://qlever.dev https://query-scholarly.wikidata.org" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="connect-src 'self' 'unsafe-eval' 'unsafe-inline' blob: data: filesystem: mediastream: https://*.toolforge.org https://wikibooks.org https://*.wikibooks.org https://wikidata.org https://*.wikidata.org https://wikimedia.org https://*.wikimedia.org https://wikinews.org https://*.wikinews.org https://wikipedia.org https://*.wikipedia.org https://wikiquote.org https://*.wikiquote.org https://wikisource.org https://*.wikisource.org https://wikiversity.org https://*.wikiversity.org https://wikivoyage.org https://*.wikivoyage.org https://wiktionary.org https://*.wiktionary.org https://*.wmcloud.org https://*.wmflabs.org https://wikimediafoundation.org https://mediawiki.org https://*.mediawiki.org wss://orcid-matcher.toolforge.org https://api.crossref.org https://qlever.dev https://query-scholarly.wikidata.org"
+    />
     <title>ORCID Matcher</title>
     <style>
       :root {
@@ -495,19 +498,18 @@
       const candidateTitleEl = document.getElementById("candidate-title");
       const candidateSubtitleEl = document.getElementById("candidate-subtitle");
 
-const QUEUE = [];
-const candidateCache = new Map();
-const authorRowMap = new Map();
-const candidateCounts = new Map();
-const candidateLoadPromises = new Map();
-const queuedAuthors = new Set();
-let latestResults = [];
-let selectedAuthor = null;
-let currentCandidates = [];
-let filterValue = "";
-const completionOrder = new Map();
-let nextCompletionIndex = 0;
-
+      const QUEUE = [];
+      const candidateCache = new Map();
+      const authorRowMap = new Map();
+      const candidateCounts = new Map();
+      const candidateLoadPromises = new Map();
+      const queuedAuthors = new Set();
+      let latestResults = [];
+      let selectedAuthor = null;
+      let currentCandidates = [];
+      let filterValue = "";
+      const completionOrder = new Map();
+      let nextCompletionIndex = 0;
 
       const DEFAULT_QUERY = `PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 PREFIX wd: <http://www.wikidata.org/entity/>
@@ -596,8 +598,10 @@ LIMIT 200`;
           selectedAuthor &&
           !latestResults.some((item) => item.qid === selectedAuthor.qid)
         ) {
+          const deselected = selectedAuthor;
           selectedAuthor = null;
           currentCandidates = [];
+          updateSelectionRow(deselected, null);
         }
         authorRowMap.clear();
         authorListEl.innerHTML = "";
@@ -801,10 +805,13 @@ LIMIT 200`;
       }
 
       function handleAuthorSelect(author) {
+        if (selectedAuthor?.qid === author.qid) return;
+        const previousSelection = selectedAuthor;
         selectedAuthor = author;
         candidateFilterInput.value = "";
         currentCandidates = candidateCache.get(author.qid) || [];
-        renderResults(latestResults);
+        updateSelectionRow(previousSelection, selectedAuthor);
+        renderCandidateList();
         loadCandidates(author).catch((error) => {
           console.warn("Candidate load failed", error);
         });
@@ -827,9 +834,8 @@ LIMIT 200`;
         const loadPromise = (async () => {
           const dois = await gatherAuthorDois(item);
           const normalizedDois = normalizeDois(dois);
-          const { map, missingDois } = await fetchCrossrefCandidates(
-            normalizedDois,
-          );
+          const { map, missingDois } =
+            await fetchCrossrefCandidates(normalizedDois);
           const candidates = Array.from(map.values()).map((entry) => ({
             orcid: entry.orcid,
             name: entry.name,
@@ -1225,6 +1231,17 @@ LIMIT ${limit}`;
         const row = authorRowMap.get(qid);
         if (!row) return;
         row.classList.toggle("queued", queuedAuthors.has(qid));
+      }
+
+      function updateSelectionRow(previous, current) {
+        if (previous) {
+          const prevRow = authorRowMap.get(previous.qid);
+          if (prevRow) prevRow.classList.remove("selected");
+        }
+        if (current) {
+          const currentRow = authorRowMap.get(current.qid);
+          if (currentRow) currentRow.classList.add("selected");
+        }
       }
 
       function setAuthorQueuedState(qid, queued) {
