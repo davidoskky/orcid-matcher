@@ -527,24 +527,40 @@
       const completionOrder = new Map();
       let nextCompletionIndex = 0;
 
-      const DEFAULT_QUERY = `PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-PREFIX wd: <http://www.wikidata.org/entity/>
-PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+      function getJournalParamFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        const rawValue = params.get("journal");
+        if (!rawValue) return null;
+        const normalized = rawValue.trim().toUpperCase();
+        return /^Q\d+$/.test(normalized) ? normalized : null;
+      }
 
-SELECT DISTINCT ?person ?personLabel ?doi WHERE {
-  ?work wdt:P356 ?doi ;
-        wdt:P50  ?person ;
-        wdt:P577 ?date .
+      function buildDefaultQuery(journalQid) {
+        const journalClause = journalQid
+          ? `        wdt:P1433 wd:${journalQid} ;\n`
+          : "";
+        return `PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+        PREFIX wd: <http://www.wikidata.org/entity/>
+        PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
-  FILTER(?date > "2011-12-31T23:59:59Z"^^xsd:dateTime)
-  ?person wdt:P31 wd:Q5 .
-  FILTER NOT EXISTS { ?person wdt:P496 [] }
+        SELECT DISTINCT ?person ?personLabel ?doi WHERE {
+          ?work wdt:P356 ?doi ;
+                wdt:P50  ?person ;
+${journalClause}                wdt:P577 ?date .
 
-  OPTIONAL { ?person rdfs:label ?personLabel . FILTER(LANG(?personLabel) = "en") }
-}
-ORDER BY RAND()
-LIMIT 200`;
+          FILTER(?date > "2011-12-31T23:59:59Z"^^xsd:dateTime)
+          ?person wdt:P31 wd:Q5 .
+          FILTER NOT EXISTS { ?person wdt:P496 [] }
+
+          OPTIONAL { ?person rdfs:label ?personLabel . FILTER(LANG(?personLabel) = "en") }
+        }
+        ORDER BY RAND()
+        LIMIT 200`;
+      }
+
+      const journalOverride = getJournalParamFromUrl();
+      const DEFAULT_QUERY = buildDefaultQuery(journalOverride);
       textarea.textContent = DEFAULT_QUERY;
 
       runBtn.addEventListener("click", async () => {
